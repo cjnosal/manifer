@@ -1,0 +1,13 @@
+type: opsfile
+
+libraries:
+- alias: base
+  path: ./base_library.yml
+- alias: test
+  path: ./library.yml
+
+scenarios:
+- name: meta
+  scenarios:
+  - name: base.base
+  - name: test.placeholder

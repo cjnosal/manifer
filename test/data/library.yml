@@ -1,0 +1,49 @@
+type: opsfile
+
+scenarios:
+- name: bizz
+  snippets:
+  - path: ./opsfile.yml
+
+- name: empty
+  snippets:
+  - path: ./empty_opsfile.yml
+
+- name: placeholder
+  scenarios:
+  - name: basic
+    args:
+    - -v
+    - value2=basic_from_placeholder
+  args:
+  - -v 
+  - path1=/fixed?
+  - -v 
+  - value1=from_scenario
+  snippets:
+  - path: ./placeholder_opsfile.yml
+    args:
+    - -v 
+    - path2=/set?
+    - -v 
+    - value2=by_first
+  - path: ./placeholder_opsfile.yml
+    args:
+    - -v 
+    - path2=/reused?
+    - -v 
+    - value2=by_second
+
+- name: basic
+  args:
+  - -v 
+  - path1=/base1?
+  - -v 
+  - value1=from_basic
+  snippets:
+  - path: ./placeholder_opsfile.yml
+    args:
+    - -v 
+    - path2=/base2?
+    - -v 
+    - path3=/base3?
