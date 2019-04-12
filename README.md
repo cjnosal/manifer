@@ -37,13 +37,12 @@ combine the library and template to compose the final document.
 There are four argument scopes:
 - snippet args
 - scenario args
-- scenario template args
 - scenario global args
 - CLI global args
 
 Every snippet is used in two interpolations:
 - first the snippet itself is interpolated with snippet args, scenario args, and global args
-- then the template is interpolated with the interpolated snippet, template args, and global args
+- then the template is interpolated with the interpolated snippet and global args
 
 # multiple libraries
 Libraries can include other libraries by specifying the path and an alias under 

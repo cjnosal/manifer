@@ -36,10 +36,9 @@ func TestSelectScenarios(t *testing.T) {
 			Type: library.OpsFile,
 			Scenarios: []library.Scenario{
 				{
-					Name:         "dependency",
-					GlobalArgs:   []string{"g2"},
-					TemplateArgs: []string{"t2"},
-					Args:         []string{"a2"},
+					Name:       "dependency",
+					GlobalArgs: []string{"g2"},
+					Args:       []string{"a2"},
 					Snippets: []library.Snippet{
 						{
 							Path: "./lib/snippet2.yml",
@@ -48,11 +47,10 @@ func TestSelectScenarios(t *testing.T) {
 					},
 				},
 				{
-					Name:         "big_dependency",
-					GlobalArgs:   []string{},
-					TemplateArgs: []string{},
-					Args:         []string{},
-					Snippets:     []library.Snippet{},
+					Name:       "big_dependency",
+					GlobalArgs: []string{},
+					Args:       []string{},
+					Snippets:   []library.Snippet{},
 					Scenarios: []library.ScenarioRef{
 						{
 							Name: "dependency",
@@ -77,10 +75,9 @@ func TestSelectScenarios(t *testing.T) {
 			},
 			Scenarios: []library.Scenario{
 				{
-					Name:         "main",
-					GlobalArgs:   []string{"g1"},
-					TemplateArgs: []string{"t1"},
-					Args:         []string{"a1"},
+					Name:       "main",
+					GlobalArgs: []string{"g1"},
+					Args:       []string{"a1"},
 					Snippets: []library.Snippet{
 						{
 							Path: "./lib/snippet1.yml",
@@ -95,11 +92,10 @@ func TestSelectScenarios(t *testing.T) {
 					},
 				},
 				{
-					Name:         "big",
-					GlobalArgs:   []string{},
-					TemplateArgs: []string{},
-					Args:         []string{},
-					Snippets:     []library.Snippet{},
+					Name:       "big",
+					GlobalArgs: []string{},
+					Args:       []string{},
+					Snippets:   []library.Snippet{},
 					Scenarios: []library.ScenarioRef{
 						{
 							Name: "ref.big_dependency",
@@ -157,10 +153,6 @@ func TestSelectScenarios(t *testing.T) {
 					"g2",
 					"g1",
 				},
-				TemplateArgs: []string{
-					"t2",
-					"t1",
-				},
 				Snippets: []library.Snippet{
 					{
 						Path: "./lib/snippet2.yml",
@@ -204,9 +196,6 @@ func TestSelectScenarios(t *testing.T) {
 				GlobalArgs: []string{
 					"g2",
 				},
-				TemplateArgs: []string{
-					"t2",
-				},
 				Snippets: []library.Snippet{
 					{
 						Path: "./lib/snippet2.yml",
@@ -232,8 +221,7 @@ func TestSelectScenarios(t *testing.T) {
 			},
 
 			expectedPlan: &Plan{
-				GlobalArgs:   []string{},
-				TemplateArgs: []string{},
+				GlobalArgs: []string{},
 				Snippets: []library.Snippet{
 					{
 						Path: "./lib/snippet3.yml",

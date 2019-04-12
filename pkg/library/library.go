@@ -18,13 +18,12 @@ type LibraryRef struct {
 }
 
 type Scenario struct {
-	Name         string
-	Description  string
-	GlobalArgs   []string `yaml:"global_args"`
-	TemplateArgs []string `yaml:"template_args"`
-	Args         []string
-	Snippets     []Snippet
-	Scenarios    []ScenarioRef
+	Name        string
+	Description string
+	GlobalArgs  []string `yaml:"global_args"`
+	Args        []string
+	Snippets    []Snippet
+	Scenarios   []ScenarioRef
 }
 
 type ScenarioRef struct {

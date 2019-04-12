@@ -37,8 +37,7 @@ func TestResolve(t *testing.T) {
 				},
 			},
 			expectedPlan: &scenario.Plan{
-				GlobalArgs:   []string{},
-				TemplateArgs: []string{},
+				GlobalArgs: []string{},
 				Snippets: []library.Snippet{
 					{
 						Path: "./lib/snippet.yml",

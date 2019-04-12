@@ -38,7 +38,7 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 	defer c.File.RemoveAll(temp)
 
 	in := templatePath
-	postSnippetArgs := append(append(plan.TemplateArgs, plan.GlobalArgs...), passthrough...)
+	postSnippetArgs := append(plan.GlobalArgs, passthrough...)
 	var out string
 
 	for i, snippet := range plan.Snippets {

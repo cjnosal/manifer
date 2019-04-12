@@ -25,8 +25,7 @@ type interpolation struct {
 func TestCompose(t *testing.T) {
 
 	planWithGlobals := &scenario.Plan{
-		GlobalArgs:   []string{"global arg"},
-		TemplateArgs: []string{"template arg"},
+		GlobalArgs: []string{"global arg"},
 		Snippets: []library.Snippet{
 			{
 				Path: "/snippet",
@@ -39,8 +38,7 @@ func TestCompose(t *testing.T) {
 	}
 
 	planWithoutGlobals := &scenario.Plan{
-		GlobalArgs:   []string{},
-		TemplateArgs: []string{},
+		GlobalArgs: []string{},
 		Snippets: []library.Snippet{
 			{
 				Path: "/snippet",
@@ -118,7 +116,6 @@ func TestCompose(t *testing.T) {
 						"cli arg",
 					},
 					templateArgs: []string{
-						"template arg",
 						"global arg",
 						"cli arg",
 					},
@@ -128,7 +125,6 @@ func TestCompose(t *testing.T) {
 					out:     "/tmp/composed_final.yml",
 					snippet: "",
 					templateArgs: []string{
-						"template arg",
 						"global arg",
 						"cli arg",
 					},

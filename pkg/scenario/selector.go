@@ -7,9 +7,8 @@ import (
 )
 
 type Plan struct {
-	GlobalArgs   []string
-	TemplateArgs []string
-	Snippets     []library.Snippet
+	GlobalArgs []string
+	Snippets   []library.Snippet
 }
 
 type ScenarioSelector interface {
@@ -22,9 +21,8 @@ type Selector struct {
 
 func (selector *Selector) SelectScenarios(scenarioNames []string, libraries []library.LoadedLibrary) (*Plan, error) {
 	plan := &Plan{
-		GlobalArgs:   []string{},
-		TemplateArgs: []string{},
-		Snippets:     []library.Snippet{},
+		GlobalArgs: []string{},
+		Snippets:   []library.Snippet{},
 	}
 
 	for _, name := range scenarioNames {
@@ -59,7 +57,6 @@ func (selector *Selector) updatePlan(scenarioName string, libraries []library.Lo
 		}
 	}
 
-	plan.TemplateArgs = append(plan.TemplateArgs, rootScenario.TemplateArgs...)
 	plan.GlobalArgs = append(plan.GlobalArgs, rootScenario.GlobalArgs...)
 	for _, snippet := range rootScenario.Snippets {
 		args := snippet.Args

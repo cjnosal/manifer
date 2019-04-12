@@ -36,10 +36,9 @@ func TestListScenarios(t *testing.T) {
 			Type: library.OpsFile,
 			Scenarios: []library.Scenario{
 				{
-					Name:         "dependency",
-					GlobalArgs:   []string{"g2"},
-					TemplateArgs: []string{"t2"},
-					Args:         []string{"a2"},
+					Name:       "dependency",
+					GlobalArgs: []string{"g2"},
+					Args:       []string{"a2"},
 					Snippets: []library.Snippet{
 						{
 							Path: "./lib/snippet2.yml",
@@ -48,12 +47,11 @@ func TestListScenarios(t *testing.T) {
 					},
 				},
 				{
-					Name:         "big_dependency",
-					Description:  "a bigger utility",
-					GlobalArgs:   []string{},
-					TemplateArgs: []string{},
-					Args:         []string{},
-					Snippets:     []library.Snippet{},
+					Name:        "big_dependency",
+					Description: "a bigger utility",
+					GlobalArgs:  []string{},
+					Args:        []string{},
+					Snippets:    []library.Snippet{},
 					Scenarios: []library.ScenarioRef{
 						{
 							Name: "dependency",
@@ -78,11 +76,10 @@ func TestListScenarios(t *testing.T) {
 			},
 			Scenarios: []library.Scenario{
 				{
-					Name:         "main",
-					Description:  "the default",
-					GlobalArgs:   []string{"g1"},
-					TemplateArgs: []string{"t1"},
-					Args:         []string{"a1"},
+					Name:        "main",
+					Description: "the default",
+					GlobalArgs:  []string{"g1"},
+					Args:        []string{"a1"},
 					Snippets: []library.Snippet{
 						{
 							Path: "./lib/snippet1.yml",
@@ -97,12 +94,11 @@ func TestListScenarios(t *testing.T) {
 					},
 				},
 				{
-					Name:         "big",
-					Description:  "include everything",
-					GlobalArgs:   []string{},
-					TemplateArgs: []string{},
-					Args:         []string{},
-					Snippets:     []library.Snippet{},
+					Name:        "big",
+					Description: "include everything",
+					GlobalArgs:  []string{},
+					Args:        []string{},
+					Snippets:    []library.Snippet{},
 					Scenarios: []library.ScenarioRef{
 						{
 							Name: "ref.big_dependency",
