@@ -1,7 +1,0 @@
-- type: replace
-  path: /bizz?
-  value: bazz
-
-- type: replace
-  path: /bazz?
-  value: buzz

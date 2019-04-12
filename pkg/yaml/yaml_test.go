@@ -2,7 +2,6 @@ package yaml
 
 import (
 	"errors"
-	"io/ioutil"
 	"reflect"
 	"testing"
 
@@ -145,13 +144,8 @@ func TestWrite(t *testing.T) {
 			t.Error("Write should not return error if writer succeeded")
 		}
 
-		bytes, err := ioutil.ReadFile("../../test/data/valid.yml")
-		if err != nil {
-			t.Error("Unable to load test data")
-		}
-
 		actual := writer.String()
-		expected := string(bytes)
+		expected := "key: value\nname: test\n"
 		if actual != expected {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expected, actual)
 		}

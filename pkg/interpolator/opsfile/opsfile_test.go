@@ -2,7 +2,6 @@ package opsfile
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -24,11 +23,6 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 		Path:  &p,
 		Value: &i,
 	}
-}
-
-func loadTestFile(path string) []byte {
-	bytes, _ := ioutil.ReadFile(path)
-	return bytes
 }
 
 func TestWrapper(t *testing.T) {
@@ -119,9 +113,12 @@ func TestWrapper(t *testing.T) {
 
 func TestInterpolate(t *testing.T) {
 
+	validTemplate := "foo: bar\n\n"
+	invalidTemplate := ":::not yaml"
 	cases := []struct {
 		name            string
 		in              string
+		inString        string
 		out             string
 		snippet         string
 		originalSnippet string
@@ -141,43 +138,47 @@ func TestInterpolate(t *testing.T) {
 		{
 			name:       "vars only",
 			in:         "../../../test/data/template_with_var.yml",
+			inString:   validTemplate,
 			out:        "/tmp/manifer_out.yml",
 			includeOps: true,
 			args: []string{
 				"-v",
 				"bar=bar",
 			},
-			expectedOut: "../../../test/data/template.yml",
+			expectedOut: "foo: bar\n",
 		},
 		{
 			name:            "single op",
 			in:              "../../../test/data/template.yml",
+			inString:        validTemplate,
 			out:             "/tmp/manifer_out.yml",
-			snippet:         "../../../test/data/interpolated_snippet.yml",
-			originalSnippet: "../../../test/data/opsfile.yml",
+			snippet:         "interpolated_snippet.yml",
+			originalSnippet: "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			expectedOut: "../../../test/data/interpolated_bizz.yml",
+			expectedOut: "bizz: bazz\nfoo: bar\n",
 		},
 		{
 			name:            "multiple ops in file",
 			in:              "../../../test/data/template.yml",
+			inString:        validTemplate,
 			out:             "/tmp/manifer_out.yml",
-			snippet:         "../../../test/data/interpolated_snippet.yml",
-			originalSnippet: "../../../test/data/opsfile.yml",
+			snippet:         "interpolated_snippet.yml",
+			originalSnippet: "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 				newOpDefinition("replace", "/bazz?", "buzz"),
 			},
-			expectedOut: "../../../test/data/interpolated_bizz_bazz.yml",
+			expectedOut: "bazz: buzz\nbizz: bazz\nfoo: bar\n",
 		},
 		{
 			name:            "ignored passthrough ops",
 			in:              "../../../test/data/template_with_var.yml",
+			inString:        validTemplate,
 			out:             "/tmp/manifer_out.yml",
-			snippet:         "../../../test/data/interpolated_snippet.yml",
-			originalSnippet: "../../../test/data/opsfile.yml",
+			snippet:         "interpolated_snippet.yml",
+			originalSnippet: "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
@@ -188,18 +189,19 @@ func TestInterpolate(t *testing.T) {
 				"-o",
 				"../../../test/data/opsfile_with_vars.yml",
 			},
-			expectedOut: "../../../test/data/interpolated_bizz.yml",
+			expectedOut: "bizz: bazz\nfoo: bar\n",
 		},
 		{
 			name:       "include passthrough ops",
 			in:         "../../../test/data/template.yml",
+			inString:   validTemplate,
 			out:        "/tmp/manifer_out.yml",
 			includeOps: true,
 			args: []string{
 				"-o",
 				"../../../test/data/opsfile.yml",
 			},
-			expectedOut: "../../../test/data/interpolated_bizz_bazz.yml",
+			expectedOut: "bazz: buzz\nbizz: bazz\nfoo: bar\n",
 		},
 		{
 			name:              "read template error",
@@ -209,7 +211,7 @@ func TestInterpolate(t *testing.T) {
 		},
 		{
 			name: "parse args error",
-			in:   "../../../test/data/template.yml",
+			in:   "template.yml",
 			args: []string{
 				"--invalid",
 			},
@@ -226,35 +228,37 @@ func TestInterpolate(t *testing.T) {
 		{
 			name:            "parse snippet error",
 			in:              "../../../test/data/template.yml",
-			snippet:         "../../../test/data/interpolated_snippet.yml",
-			originalSnippet: "../../../test/data/opsfile.yml",
+			snippet:         "interpolated_snippet.yml",
+			originalSnippet: "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("", "", ""),
 			},
-			expectedError: errors.New(`Unable to create ops from definitions in ../../../test/data/opsfile.yml: Unknown operation [0] with type '' within
+			expectedError: errors.New(`Unable to create ops from definitions in opsfile.yml: Unknown operation [0] with type '' within
 {
   "Path": "",
   "Value": "<redacted>"
 }`),
 		},
 		{
-			name:            "template evalution error",
-			in:              "../../../test/data/invalid.yml",
-			snippet:         "../../../test/data/interpolated_snippet.yml",
-			originalSnippet: "../../../test/data/opsfile.yml",
+			name:            "../../../test/data/template evalution error",
+			in:              "invalid.yml",
+			inString:        invalidTemplate,
+			snippet:         "interpolated_snippet.yml",
+			originalSnippet: "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			expectedError: errors.New("Unable to evaluate template ../../../test/data/invalid.yml with op 0 from ../../../test/data/opsfile.yml: Expected to find a map at path '/bizz?' but found 'string'"),
+			expectedError: errors.New("Unable to evaluate template invalid.yml with op 0 from opsfile.yml: Expected to find a map at path '/bizz?' but found 'string'"),
 		},
 		{
 			name:               "write error",
 			in:                 "../../../test/data/template.yml",
+			inString:           validTemplate,
 			out:                "/tmp/manifer_out.yml",
-			expectedOut:        "../../../test/data/interpolated_bizz.yml",
+			expectedOut:        "bizz: bazz\nfoo: bar\n",
 			writeTemplateError: errors.New("test"),
-			snippet:            "../../../test/data/interpolated_snippet.yml",
-			originalSnippet:    "../../../test/data/opsfile.yml",
+			snippet:            "interpolated_snippet.yml",
+			originalSnippet:    "opsfile.yml",
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
@@ -275,7 +279,7 @@ func TestInterpolate(t *testing.T) {
 				Yaml: mockYaml,
 			}
 
-			mockFile.EXPECT().Read(c.in).Times(1).Return(loadTestFile(c.in), c.readTemplateError)
+			mockFile.EXPECT().Read(c.in).Times(1).Return([]byte(c.inString), c.readTemplateError)
 
 			if c.snippet != "" {
 				mockYaml.EXPECT().Load(c.snippet, &[]patch.OpDefinition{}).Times(1).Return(c.readSnippetError).Do(func(path string, o *[]patch.OpDefinition) {
@@ -283,7 +287,7 @@ func TestInterpolate(t *testing.T) {
 				})
 			}
 			if c.out != "" {
-				mockFile.EXPECT().Write(c.out, loadTestFile(c.expectedOut), os.FileMode(0644)).Times(1).Return(c.writeTemplateError)
+				mockFile.EXPECT().Write(c.out, []byte(c.expectedOut), os.FileMode(0644)).Times(1).Return(c.writeTemplateError)
 			}
 
 			err := subject.interpolate(c.in, c.out, c.snippet, c.originalSnippet, c.args, c.includeOps)
