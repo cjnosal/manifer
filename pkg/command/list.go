@@ -13,6 +13,7 @@ import (
 
 type listCmd struct {
 	libraryPaths arrayFlags
+	allScenarios bool
 
 	logger *log.Logger
 	writer io.Writer
@@ -30,18 +31,19 @@ func NewListCommand(l io.Writer, w io.Writer, sl scenario.ScenarioLister) subcom
 func (*listCmd) Name() string     { return "list" }
 func (*listCmd) Synopsis() string { return "list scenarios in selected libraries." }
 func (*listCmd) Usage() string {
-	return `list (-l <library path>...):
+	return `list [-a] (-l <library path>...):
   list scenarios in selected libraries.
 `
 }
 
 func (p *listCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(&p.libraryPaths, "l", "Path to library file")
+	f.BoolVar(&p.allScenarios, "a", false, "Include all referenced libraries")
 }
 
 func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
-	outBytes, err := p.lister.ListScenarios(p.libraryPaths)
+	outBytes, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
 
 	if err != nil {
 		p.logger.Printf("Error looking up scenarios: %v", err)

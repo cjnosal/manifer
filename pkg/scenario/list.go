@@ -6,14 +6,14 @@ import (
 )
 
 type ScenarioLister interface {
-	ListScenarios(libraries []string) ([]byte, error)
+	ListScenarios(libraries []string, all bool) ([]byte, error)
 }
 
 type Lister struct {
 	Loader library.LibraryLoader
 }
 
-func (l *Lister) ListScenarios(libraryPaths []string) ([]byte, error) {
+func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]byte, error) {
 	builder := strings.Builder{}
 	libs, err := l.Loader.Load(libraryPaths)
 	if err != nil {
@@ -21,13 +21,13 @@ func (l *Lister) ListScenarios(libraryPaths []string) ([]byte, error) {
 	}
 
 	for _, lib := range libs {
-		l.printLib("", &lib, &builder)
+		l.printLib("", &lib, &builder, all)
 	}
 
 	return []byte(builder.String()), nil
 }
 
-func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, builder *strings.Builder) {
+func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, builder *strings.Builder, all bool) {
 	for _, s := range lib.Library.Scenarios {
 		builder.WriteString(prefix + s.Name)
 		builder.WriteString("\n\t")
@@ -44,8 +44,10 @@ func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, builder *st
 		builder.WriteString("\n")
 	}
 
-	for ref, lib := range lib.References {
-		refPath := prefix + ref + "."
-		l.printLib(refPath, lib, builder)
+	if all {
+		for ref, lib := range lib.References {
+			refPath := prefix + ref + "."
+			l.printLib(refPath, lib, builder, all)
+		}
 	}
 }

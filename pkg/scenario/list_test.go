@@ -122,7 +122,7 @@ func TestListScenarios(t *testing.T) {
 		*independantLibrary,
 	}
 
-	t.Run("list", func(t *testing.T) {
+	t.Run("list provided libraries", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		loader := library.NewMockLibraryLoader(ctrl)
@@ -132,7 +132,41 @@ func TestListScenarios(t *testing.T) {
 
 		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
 
-		bytes, err := subject.ListScenarios([]string{"lib1", "lib2"})
+		bytes, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
+
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		outStr := string(bytes)
+
+		expected := `main
+	the default
+
+big
+	include everything
+
+extra
+	an additional scenario
+
+`
+
+		if expected != outStr {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, outStr)
+		}
+	})
+
+	t.Run("list all referenced libraries", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		loader := library.NewMockLibraryLoader(ctrl)
+		subject := &Lister{
+			Loader: loader,
+		}
+
+		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
+
+		bytes, err := subject.ListScenarios([]string{"lib1", "lib2"}, true)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -172,7 +206,7 @@ extra
 
 		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(nil, errors.New("test"))
 
-		_, err := subject.ListScenarios([]string{"lib1", "lib2"})
+		_, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
 
 		if err == nil || err.Error() != "test" {
 			t.Errorf("Loader error not reported")

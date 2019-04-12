@@ -15,6 +15,13 @@ combine the library and template to compose the final document.
 
 # run
 ```
+./manifer list [-a] (-l <library path>...):
+  list scenarios in selected libraries.
+  -a    Include all referenced libraries
+  -l value
+        Path to library file
+```
+```
 ./manifer compose -t <template path> (-l <library path>...) (-s <scenario>...) [-- passthrough flags ...]:
   compose a yml file from snippets.
   -l string
