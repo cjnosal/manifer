@@ -53,8 +53,6 @@ func main() {
 	// TODO subcommand/flag for showing plan steps
 	// TODO subcommand/flag for showing diffs between steps
 
-	// TODO integration tests
-
 	// register subcommands
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
