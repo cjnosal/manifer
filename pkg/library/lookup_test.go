@@ -125,7 +125,7 @@ func TestGetContainingLibrary(t *testing.T) {
 
 			if c.expectedError == nil {
 				if !reflect.DeepEqual(c.expectedLibrary, lib) {
-					t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedLibrary, lib)
+					t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", c.expectedLibrary, lib)
 				}
 			}
 		})

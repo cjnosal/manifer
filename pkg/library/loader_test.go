@@ -321,7 +321,7 @@ func TestLoad(t *testing.T) {
 
 			if c.expectedError == nil {
 				if !reflect.DeepEqual(c.expectedLoadedLibs, loadedLibs) {
-					t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedLoadedLibs, loadedLibs)
+					t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", c.expectedLoadedLibs, loadedLibs)
 				}
 			}
 		})
