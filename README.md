@@ -22,10 +22,12 @@ combine the library and template to compose the final document.
         Path to library file
 ```
 ```
-./manifer compose -t <template path> (-l <library path>...) (-s <scenario>...) [-- passthrough flags ...]:
+./manifer compose -t <template path> (-l <library path>...) (-s <scenario>...) [-p] [-d] [-- passthrough flags ...]:
   compose a yml file from snippets.
-  -l string
+  -d    Show diff after each snippet is applied
+  -l value
         Path to library file
+  -p    Show snippets and arguments being applied
   -s value
         Scenario name in library
   -t string

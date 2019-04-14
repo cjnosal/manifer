@@ -6,13 +6,15 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/cjnosal/manifer/pkg/command"
 	"github.com/cjnosal/manifer/pkg/composer"
+	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/interpolator/opsfile"
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/pkg/scenario"
 	"github.com/cjnosal/manifer/pkg/yaml"
 )
@@ -24,6 +26,11 @@ func main() {
 	file := &file.FileIO{}
 	yaml := &yaml.Yaml{
 		File: file,
+	}
+	patch := diffmatchpatch.New()
+	diff := &diff.FileDiff{
+		File:  file,
+		Patch: patch,
 	}
 	lookup := &library.Lookup{}
 	selector := &scenario.Selector{
@@ -38,6 +45,11 @@ func main() {
 		Selector: selector,
 	}
 	opsFileInterpolator := opsfile.NewOpsFileInterpolator(file, yaml)
+	opsFileExecutor := &plan.InterpolationExecutor{
+		Interpolator: opsFileInterpolator,
+		Diff:         diff,
+		Output:       logger,
+	}
 	composer := &composer.ComposerImpl{
 		Resolver: resolver,
 		File:     file,
@@ -46,18 +58,15 @@ func main() {
 		Loader: loader,
 	}
 
-	interpolatorMap := map[library.Type]interpolator.Interpolator{
-		library.OpsFile: opsFileInterpolator,
+	executorMap := map[library.Type]plan.Executor{
+		library.OpsFile: opsFileExecutor,
 	}
-
-	// TODO subcommand/flag for showing plan steps
-	// TODO subcommand/flag for showing diffs between steps
 
 	// register subcommands
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
-	subcommands.Register(command.NewComposeCommand(logger, writer, composer, interpolatorMap), "")
+	subcommands.Register(command.NewComposeCommand(logger, writer, composer, executorMap), "")
 	subcommands.Register(command.NewListCommand(logger, writer, lister), "")
 
 	// run

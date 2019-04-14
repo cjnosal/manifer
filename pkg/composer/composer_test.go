@@ -8,12 +8,14 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/pkg/scenario"
 )
 
 type interpolation struct {
+	showPlan     bool
+	showDiff     bool
 	in           string
 	out          string
 	snippet      string
@@ -55,6 +57,8 @@ func TestCompose(t *testing.T) {
 		template       string
 		libraries      []string
 		scenarioNames  []string
+		showPlan       bool
+		showDiff       bool
 		plan           *scenario.Plan
 		planError      error
 		interpolations []interpolation
@@ -217,7 +221,7 @@ func TestCompose(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+			mockExecutor := plan.NewMockExecutor(ctrl)
 			mockResolver := NewMockScenarioResolver(ctrl)
 			mockFile := file.NewMockFileAccess(ctrl)
 			subject := ComposerImpl{
@@ -230,7 +234,7 @@ func TestCompose(t *testing.T) {
 				if i.err != nil {
 					shouldLoad = false
 				}
-				mockInterpolator.EXPECT().Interpolate(i.in, i.out, i.snippet, i.snippetArgs, i.templateArgs).Times(1).Return(i.err)
+				mockExecutor.EXPECT().Execute(i.showPlan, i.showDiff, i.in, i.out, i.snippet, i.snippetArgs, i.templateArgs).Times(1).Return(i.err)
 			}
 
 			mockResolver.EXPECT().Resolve(c.libraries, c.scenarioNames, c.passthrough).Times(1).Return(c.plan, c.planError)
@@ -244,7 +248,7 @@ func TestCompose(t *testing.T) {
 					}
 				}
 			}
-			out, err := subject.Compose(mockInterpolator, c.template, c.libraries, c.scenarioNames, c.passthrough)
+			out, err := subject.Compose(mockExecutor, c.template, c.libraries, c.scenarioNames, c.passthrough, c.showPlan, c.showDiff)
 
 			if !reflect.DeepEqual(c.expectedError, err) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

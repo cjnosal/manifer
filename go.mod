@@ -7,6 +7,7 @@ require (
 	github.com/cppforlife/go-patch v0.2.0
 	github.com/golang/mock v1.2.0
 	github.com/google/subcommands v1.0.1
+	github.com/sergi/go-diff v1.0.0
 	github.com/xtreme-conor-nosal/bosh-cli v0.0.0-20190314033449-dbb84eef307d
 	gopkg.in/yaml.v2 v2.2.2
 )

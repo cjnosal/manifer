@@ -3,16 +3,18 @@ package composer
 import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
+	"github.com/cjnosal/manifer/pkg/plan"
 	"path/filepath"
 )
 
 type Composer interface {
-	Compose(interpolator interpolator.Interpolator,
+	Compose(executor plan.Executor,
 		templatePath string,
 		libraryPaths []string,
 		scenarioNames []string,
-		passthrough []string) ([]byte, error)
+		passthrough []string,
+		showPlan bool,
+		showDiff bool) ([]byte, error)
 }
 
 type ComposerImpl struct {
@@ -20,11 +22,13 @@ type ComposerImpl struct {
 	File     file.FileAccess
 }
 
-func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
+func (c *ComposerImpl) Compose(executor plan.Executor,
 	templatePath string,
 	libraryPaths []string,
 	scenarioNames []string,
-	passthrough []string) ([]byte, error) {
+	passthrough []string,
+	showPlan bool,
+	showDiff bool) ([]byte, error) {
 
 	plan, err := c.Resolver.Resolve(libraryPaths, scenarioNames, passthrough)
 	if err != nil {
@@ -42,7 +46,7 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 
 	for i, snippet := range plan.Snippets {
 		out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
-		err = interpolator.Interpolate(in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
+		err = executor.Execute(showPlan, showDiff, in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to apply snippet %s: %s", snippet.Path, err.Error())
 		}
@@ -52,7 +56,7 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 
 	if len(plan.GlobalArgs) > 0 {
 		out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
-		err = interpolator.Interpolate(in, out, "", nil, plan.GlobalArgs)
+		err = executor.Execute(showPlan, showDiff, in, out, "", nil, plan.GlobalArgs)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", plan.GlobalArgs, err.Error())
 		}
