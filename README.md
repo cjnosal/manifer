@@ -11,7 +11,8 @@ combine the library and template to compose the final document.
 - `--setup` will `go get` required branches of forked dependencies
 
 # test
-`./scripts/test.sh`
+`./scripts/test.sh [go test flags]`
+- `-count=1` can be used to disable test caching of integration tests in `cmd/manifer`
 
 # run
 ```
@@ -55,7 +56,15 @@ If multiple independant libraries are provided to the CLI all scenario names
 should be unambiguous.
 
 # sample
+```base_library.yml
+type: opsfile
+
+scenarios:
+- name: "reusable"
+  snippets:
+  - path: ./common_opsfile.yml
 ```
+```derived_library.yml
 type: opsfile
 
 libraries:
@@ -75,23 +84,22 @@ scenarios:
 
 - name: "derived"
   scenarios:
+  - "other.reusable"
   - "base"
+  global_args:
+  - -v
+  - deployment=test
   args:
   - -v 
   - foo=overridden
   snippets:
   - path: ./another_opsfile.yml
 ```
-
-Invoking:
-`./manifer compose -l library.yml -t template.yml -s derived -- -v extra=arg`
-
-Is equivalend to:
+```template.yml
+arbitrary: yaml
 ```
-# apply base scenario
-bosh interpolate -v path=value -v foo=bar -v foo=overridden -v extra=arg ./opsfile.yml > /tmp/op1
-bosh interpolate -v foo=bar -v foo=overridden -v extra=arg -o /tmp/op1 template.yml > /tmp/t1
-# apply derived scenario
-bosh interpolate -v foo=overridden -v extra=arg ./another_opsfile.yml > /tmp/op2
-bosh interpolate -v foo=overridden -v extra=arg -o /tmp/op2 /tmp/t1
-```
+
+Invoke with:
+`./manifer compose -l derived_library.yml -t template.yml -s derived -- -v extra=arg`
+
+Add `-p` (show plan) and `-d` (show diff) to see the input/output of each interpolation
