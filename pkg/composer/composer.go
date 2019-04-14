@@ -26,7 +26,7 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 	scenarioNames []string,
 	passthrough []string) ([]byte, error) {
 
-	plan, err := c.Resolver.Resolve(libraryPaths, scenarioNames)
+	plan, err := c.Resolver.Resolve(libraryPaths, scenarioNames, passthrough)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve scenarios: %s", err.Error())
 	}
@@ -38,14 +38,11 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 	defer c.File.RemoveAll(temp)
 
 	in := templatePath
-	postSnippetArgs := append(plan.GlobalArgs, passthrough...)
 	var out string
 
 	for i, snippet := range plan.Snippets {
-		snippetArgs := append(append(snippet.Args, plan.GlobalArgs...), passthrough...)
-
 		out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
-		err = interpolator.Interpolate(in, out, snippet.Path, snippetArgs, postSnippetArgs)
+		err = interpolator.Interpolate(in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to apply snippet %s: %s", snippet.Path, err.Error())
 		}
@@ -53,11 +50,11 @@ func (c *ComposerImpl) Compose(interpolator interpolator.Interpolator,
 		in = out
 	}
 
-	if len(postSnippetArgs) > 0 {
+	if len(plan.GlobalArgs) > 0 {
 		out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
-		err = interpolator.Interpolate(in, out, "", nil, postSnippetArgs)
+		err = interpolator.Interpolate(in, out, "", nil, plan.GlobalArgs)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", postSnippetArgs, err.Error())
+			return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", plan.GlobalArgs, err.Error())
 		}
 	}
 

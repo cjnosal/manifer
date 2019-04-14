@@ -17,6 +17,7 @@ func TestResolve(t *testing.T) {
 		name              string
 		libraryPaths      []string
 		scenarioNames     []string
+		passthrough       []string
 		yamlError         error
 		expectedLibraries []library.LoadedLibrary
 		resolveError      error
@@ -31,13 +32,18 @@ func TestResolve(t *testing.T) {
 			scenarioNames: []string{
 				"a scenario",
 			},
+			passthrough: []string{
+				"extra",
+			},
 			expectedLibraries: []library.LoadedLibrary{
 				{
 					Path: "./lib/lib.yml",
 				},
 			},
 			expectedPlan: &scenario.Plan{
-				GlobalArgs: []string{},
+				GlobalArgs: []string{
+					"extra",
+				},
 				Snippets: []library.Snippet{
 					{
 						Path: "./lib/snippet.yml",
@@ -93,7 +99,7 @@ func TestResolve(t *testing.T) {
 				Selector: mockSelector,
 			}
 
-			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames)
+			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames, c.passthrough)
 
 			if !reflect.DeepEqual(c.expectedError, err) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

@@ -25,7 +25,7 @@ type interpolation struct {
 func TestCompose(t *testing.T) {
 
 	planWithGlobals := &scenario.Plan{
-		GlobalArgs: []string{"global arg"},
+		GlobalArgs: []string{"global arg", "cli arg"},
 		Snippets: []library.Snippet{
 			{
 				Path: "/snippet",
@@ -112,8 +112,6 @@ func TestCompose(t *testing.T) {
 					snippetArgs: []string{
 						"snippet",
 						"args",
-						"global arg",
-						"cli arg",
 					},
 					templateArgs: []string{
 						"global arg",
@@ -235,7 +233,7 @@ func TestCompose(t *testing.T) {
 				mockInterpolator.EXPECT().Interpolate(i.in, i.out, i.snippet, i.snippetArgs, i.templateArgs).Times(1).Return(i.err)
 			}
 
-			mockResolver.EXPECT().Resolve(c.libraries, c.scenarioNames).Times(1).Return(c.plan, c.planError)
+			mockResolver.EXPECT().Resolve(c.libraries, c.scenarioNames, c.passthrough).Times(1).Return(c.plan, c.planError)
 
 			if c.planError == nil {
 				mockFile.EXPECT().TempDir("", "manifer").Times(1).Return("/tmp", c.tmpError)

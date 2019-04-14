@@ -8,7 +8,7 @@ import (
 )
 
 type ScenarioResolver interface {
-	Resolve(libPaths []string, scenarioNames []string) (*scenario.Plan, error)
+	Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*scenario.Plan, error)
 }
 
 type Resolver struct {
@@ -16,7 +16,7 @@ type Resolver struct {
 	Selector scenario.ScenarioSelector
 }
 
-func (r *Resolver) Resolve(libPaths []string, scenarioNames []string) (*scenario.Plan, error) {
+func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*scenario.Plan, error) {
 	libraries, err := r.Loader.Load(libPaths)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to load libraries: %v", err)
@@ -26,5 +26,8 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string) (*scenario
 	if err != nil {
 		return nil, fmt.Errorf("Unable to select scenarios: %v", err)
 	}
+
+	plan.GlobalArgs = append(plan.GlobalArgs, passthrough...)
+
 	return plan, nil
 }
