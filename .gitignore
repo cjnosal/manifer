@@ -7,7 +7,7 @@
 /manifer
 
 # Generated mocks
-/mock
+mock_*
 
 # Test binary, build with `go test -c`
 *.test
