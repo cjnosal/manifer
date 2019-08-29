@@ -70,6 +70,13 @@ func TestCompose(t *testing.T) {
 		expectedError  error
 	}{
 		{
+			name:        "no-op template",
+			template:    "/tmp/base.yml",
+			plan:        &scenario.Plan{},
+			outputPath:  "/tmp/base.yml",
+			expectedOut: []byte("base"),
+		},
+		{
 			name:     "template and one scenario",
 			template: "/tmp/base.yml",
 			libraries: []string{

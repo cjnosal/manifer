@@ -44,22 +44,27 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 	in := templatePath
 	var out string
 
-	for i, snippet := range plan.Snippets {
-		out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
-		err = executor.Execute(showPlan, showDiff, in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to apply snippet %s: %s", snippet.Path, err.Error())
+	if len(plan.Snippets) > 0 || len(plan.GlobalArgs) > 0 {
+
+		for i, snippet := range plan.Snippets {
+			out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
+			err = executor.Execute(showPlan, showDiff, in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to apply snippet %s: %s", snippet.Path, err.Error())
+			}
+
+			in = out
 		}
 
-		in = out
-	}
-
-	if len(plan.GlobalArgs) > 0 {
-		out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
-		err = executor.Execute(showPlan, showDiff, in, out, "", nil, plan.GlobalArgs)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", plan.GlobalArgs, err.Error())
+		if len(plan.GlobalArgs) > 0 {
+			out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
+			err = executor.Execute(showPlan, showDiff, in, out, "", nil, plan.GlobalArgs)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", plan.GlobalArgs, err.Error())
+			}
 		}
+	} else {
+		out = templatePath
 	}
 
 	outBytes, err := c.File.Read(out)
