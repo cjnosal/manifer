@@ -55,6 +55,12 @@ func (p *composeCmd) SetFlags(f *flag.FlagSet) {
 
 func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
+	if p.templatePath == "" {
+		p.logger.Printf("Template path not specified")
+		p.logger.Printf(p.Usage())
+		return subcommands.ExitFailure
+	}
+
 	// TODO load libary, use type to select interpolator
 	outBytes, err := p.composer.Compose(p.executors[library.OpsFile],
 		p.templatePath,

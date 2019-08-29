@@ -43,6 +43,12 @@ func (p *listCmd) SetFlags(f *flag.FlagSet) {
 
 func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
+	if len(p.libraryPaths) == 0 {
+		p.logger.Printf("Library not specified")
+		p.logger.Printf(p.Usage())
+		return subcommands.ExitFailure
+	}
+
 	outBytes, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
 
 	if err != nil {
