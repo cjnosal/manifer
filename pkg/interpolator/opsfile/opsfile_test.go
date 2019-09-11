@@ -3,7 +3,6 @@ package opsfile
 import (
 	"errors"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/cppforlife/go-patch/patch"
@@ -66,7 +65,7 @@ func TestWrapper(t *testing.T) {
 				"arg",
 			},
 			intSnippetError: errors.New("test"),
-			expectedError:   errors.New("Unable to interpolate snippet: test"),
+			expectedError:   errors.New("test\n  while trying to interpolate snippet"),
 		},
 		{
 			name:    "template error",
@@ -80,7 +79,7 @@ func TestWrapper(t *testing.T) {
 				"another",
 			},
 			intTemplateError: errors.New("test"),
-			expectedError:    errors.New("Unable to interpolate template: test"),
+			expectedError:    errors.New("test\n  while trying to interpolate template"),
 		},
 	}
 	for _, c := range cases {
@@ -104,7 +103,7 @@ func TestWrapper(t *testing.T) {
 			}
 
 			err := subject.Interpolate(c.in, c.out, c.snippet, c.snippetArgs, c.scenarioArgs)
-			if !reflect.DeepEqual(c.expectedError, err) {
+			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 		})
@@ -207,7 +206,7 @@ func TestInterpolate(t *testing.T) {
 			name:              "read template error",
 			in:                "/doesnotexist",
 			readTemplateError: errors.New("test"),
-			expectedError:     errors.New("Unable to load /doesnotexist: test"),
+			expectedError:     errors.New("test\n  while trying to load /doesnotexist"),
 		},
 		{
 			name: "parse args error",
@@ -215,7 +214,7 @@ func TestInterpolate(t *testing.T) {
 			args: []string{
 				"--invalid",
 			},
-			expectedError: errors.New("Unable to parse args: unknown flag `invalid'"),
+			expectedError: errors.New("unknown flag `invalid'\n  while trying to parse args"),
 		},
 		{
 			name:             "read snippet error",
@@ -223,7 +222,7 @@ func TestInterpolate(t *testing.T) {
 			readSnippetError: errors.New("test"),
 			snippet:          "/missingsnippet",
 			originalSnippet:  "/originalsnippet",
-			expectedError:    errors.New("Unable to load ops file /originalsnippet: test"),
+			expectedError:    errors.New("test\n  while trying to load ops file /originalsnippet"),
 		},
 		{
 			name:            "parse snippet error",
@@ -233,11 +232,12 @@ func TestInterpolate(t *testing.T) {
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("", "", ""),
 			},
-			expectedError: errors.New(`Unable to create ops from definitions in opsfile.yml: Unknown operation [0] with type '' within
+			expectedError: errors.New(`Unknown operation [0] with type '' within
 {
   "Path": "",
   "Value": "<redacted>"
-}`),
+}
+  while trying to create ops from definitions in opsfile.yml`),
 		},
 		{
 			name:            "../../../test/data/template evalution error",
@@ -248,7 +248,7 @@ func TestInterpolate(t *testing.T) {
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			expectedError: errors.New("Unable to evaluate template invalid.yml with op 0 from opsfile.yml: Expected to find a map at path '/bizz?' but found 'string'"),
+			expectedError: errors.New("Expected to find a map at path '/bizz?' but found 'string'\n  while trying to evaluate template invalid.yml with op 0 from opsfile.yml"),
 		},
 		{
 			name:               "write error",
@@ -262,7 +262,7 @@ func TestInterpolate(t *testing.T) {
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			expectedError: errors.New("Unable to write interpolated file /tmp/manifer_out.yml: test"),
+			expectedError: errors.New("test\n  while trying to write interpolated file /tmp/manifer_out.yml"),
 		},
 	}
 
@@ -292,7 +292,7 @@ func TestInterpolate(t *testing.T) {
 
 			err := subject.interpolate(c.in, c.out, c.snippet, c.originalSnippet, c.args, c.includeOps)
 
-			if !reflect.DeepEqual(c.expectedError, err) {
+			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 		})

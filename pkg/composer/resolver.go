@@ -19,12 +19,12 @@ type Resolver struct {
 func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*scenario.Plan, error) {
 	libraries, err := r.Loader.Load(libPaths)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to load libraries: %v", err)
+		return nil, fmt.Errorf("%w\n  while trying to load libraries", err)
 	}
 
 	plan, err := r.Selector.SelectScenarios(scenarioNames, libraries)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to select scenarios: %v", err)
+		return nil, fmt.Errorf("%w\n  while trying to select scenarios", err)
 	}
 
 	plan.GlobalArgs = append(plan.GlobalArgs, passthrough...)

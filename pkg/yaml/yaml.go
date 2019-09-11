@@ -25,17 +25,18 @@ func (l *Yaml) Load(path string, i interface{}) (err error) {
 			case error:
 				err = t
 			}
+			err = fmt.Errorf("%w\n  while unmarshalling yaml from %s", err, path)
 		}
 	}()
 
 	bytes, err := l.File.Read(path)
 	if err != nil {
-		return fmt.Errorf("Error loading yaml from %s: %v", path, err)
+		return fmt.Errorf("%w\n  while loading yaml from %s", err, path)
 	}
 
 	err = yaml.UnmarshalStrict(bytes, i)
 	if err != nil {
-		return fmt.Errorf("Error unmarshalling yaml from %s: %v", path, err)
+		return fmt.Errorf("%w\n  while unmarshalling yaml from %s", err, path)
 	}
 
 	return nil
@@ -52,17 +53,18 @@ func (l *Yaml) Write(w io.Writer, i interface{}) (err error) {
 			case error:
 				err = t
 			}
+			err = fmt.Errorf("%w\n  while marshalling yaml: %v", err, i)
 		}
 	}()
 
 	bytes, err := yaml.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("Error marshalling yaml: %v: %v", err, i)
+		return fmt.Errorf("%w\n  while marshalling yaml: %v", err, i)
 	}
 
 	_, err = w.Write(bytes)
 	if err != nil {
-		return fmt.Errorf("Error writing yaml: %v", err)
+		return fmt.Errorf("%w\n  while writing yaml", err)
 	}
 
 	return nil

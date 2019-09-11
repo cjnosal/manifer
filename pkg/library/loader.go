@@ -38,7 +38,7 @@ func (l *Loader) loadLib(path string) (*LoadedLibrary, error) {
 	lib := &Library{}
 	err := l.Yaml.Load(path, lib)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to load library at %s: %v", path, err)
+		return nil, fmt.Errorf("%w\n  while trying to load library at %s", err, path)
 	}
 
 	for i, scenario := range lib.Scenarios {

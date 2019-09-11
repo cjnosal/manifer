@@ -30,7 +30,7 @@ type composeCmd struct {
 
 func NewComposeCommand(l io.Writer, w io.Writer, c composer.Composer, em map[library.Type]plan.Executor) subcommands.Command {
 	return &composeCmd{
-		logger:    log.New(l, "ComposeCommand ", 0),
+		logger:    log.New(l, "", 0),
 		writer:    w,
 		composer:  c,
 		executors: em,
@@ -72,13 +72,13 @@ func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	)
 
 	if err != nil {
-		p.logger.Printf("Error composing output: %v", err)
+		p.logger.Printf("%v\n  while composing output", err)
 		return subcommands.ExitFailure
 	}
 
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
-		p.logger.Printf("Error writing composed output: %v", err)
+		p.logger.Printf("%v\n  while writing composed output", err)
 		return subcommands.ExitFailure
 	}
 

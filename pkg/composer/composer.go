@@ -32,12 +32,12 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 
 	plan, err := c.Resolver.Resolve(libraryPaths, scenarioNames, passthrough)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to resolve scenarios: %s", err.Error())
+		return nil, fmt.Errorf("%w\n  while trying to resolve scenarios", err)
 	}
 
 	temp, err := c.File.TempDir("", "manifer")
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create temporary directory: %s", err.Error())
+		return nil, fmt.Errorf("%w\n  while trying to create temporary directory", err)
 	}
 	defer c.File.RemoveAll(temp)
 
@@ -50,7 +50,7 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 			out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
 			err = executor.Execute(showPlan, showDiff, in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to apply snippet %s: %s", snippet.Path, err.Error())
+				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, snippet.Path)
 			}
 
 			in = out
@@ -60,7 +60,7 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 			out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
 			err = executor.Execute(showPlan, showDiff, in, out, "", nil, plan.GlobalArgs)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to apply passthrough args %v: %s", plan.GlobalArgs, err.Error())
+				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.GlobalArgs)
 			}
 		}
 	} else {
@@ -69,7 +69,7 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 
 	outBytes, err := c.File.Read(out)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read composed output: %v", err)
+		return nil, fmt.Errorf("%w\n  while trying to read composed output", err)
 	}
 
 	return outBytes, nil

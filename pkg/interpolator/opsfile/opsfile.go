@@ -42,13 +42,13 @@ func (i *interpolatorWrapper) Interpolate(inPath string, outPath string, snippet
 		intSnippetPath = "/tmp/int_snippet.yml"
 		err := i.interpolator.interpolate(snippetPath, intSnippetPath, "", "", append(snippetArgs, scenarioArgs...), false)
 		if err != nil {
-			return fmt.Errorf("Unable to interpolate snippet: %v", err.Error())
+			return fmt.Errorf("%w\n  while trying to interpolate snippet", err)
 		}
 	}
 
 	err := i.interpolator.interpolate(inPath, outPath, intSnippetPath, snippetPath, scenarioArgs, true)
 	if err != nil {
-		return fmt.Errorf("Unable to interpolate template: %v", err.Error())
+		return fmt.Errorf("%w\n  while trying to interpolate template", err)
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func (i *interpolatorWrapper) Interpolate(inPath string, outPath string, snippet
 func (i *ofInt) interpolate(inPath string, outPath string, snippetPath string, originalSnippetPath string, args []string, includeOps bool) error {
 	templateBytes, err := i.File.Read(inPath)
 	if err != nil {
-		return fmt.Errorf("Unable to load %s: %s", inPath, err.Error())
+		return fmt.Errorf("%w\n  while trying to load %s", err, inPath)
 	}
 	template := boshtpl.NewTemplate(templateBytes)
 
@@ -65,9 +65,9 @@ func (i *ofInt) interpolate(inPath string, outPath string, snippetPath string, o
 
 	var vars boshtpl.Variables = boshtpl.StaticVariables{}
 	if len(args) > 0 {
-		_, err = flags.ParseArgs(&boshOpts, append(args, inPath)) // manifest path is a required flag in InterpolateOpts
+		_, err = flags.NewParser(&boshOpts, flags.None).ParseArgs(append(args, inPath)) // manifest path is a required flag in InterpolateOpts
 		if err != nil {
-			return fmt.Errorf("Unable to parse args: %s", err.Error())
+			return fmt.Errorf("%w\n  while trying to parse args", err)
 		}
 		vars = boshOpts.VarFlags.AsVariables()
 	}
@@ -78,12 +78,12 @@ func (i *ofInt) interpolate(inPath string, outPath string, snippetPath string, o
 
 		err = i.Yaml.Load(snippetPath, &opDefs)
 		if err != nil {
-			return fmt.Errorf("Unable to load ops file %s: %s", originalSnippetPath, err.Error())
+			return fmt.Errorf("%w\n  while trying to load ops file %s", err, originalSnippetPath)
 		}
 
 		ops, err = patch.NewOpsFromDefinitions(opDefs)
 		if err != nil {
-			return fmt.Errorf("Unable to create ops from definitions in %s: %s", originalSnippetPath, err.Error())
+			return fmt.Errorf("%w\n  while trying to create ops from definitions in %s", err, originalSnippetPath)
 		}
 	}
 	if len(ops) == 0 {
@@ -100,14 +100,14 @@ func (i *ofInt) interpolate(inPath string, outPath string, snippetPath string, o
 	for i, op := range ops {
 		outBytes, err = template.Evaluate(vars, op, boshtpl.EvaluateOpts{})
 		if err != nil {
-			return fmt.Errorf("Unable to evaluate template %s with op %d from %s: %s", inPath, i, originalSnippetPath, err.Error())
+			return fmt.Errorf("%w\n  while trying to evaluate template %s with op %d from %s", err, inPath, i, originalSnippetPath)
 		}
 		template = boshtpl.NewTemplate(outBytes)
 	}
 
 	err = i.File.Write(outPath, outBytes, 0644)
 	if err != nil {
-		return fmt.Errorf("Unable to write interpolated file %s: %s", outPath, err.Error())
+		return fmt.Errorf("%w\n  while trying to write interpolated file %s", err, outPath)
 	}
 
 	return nil

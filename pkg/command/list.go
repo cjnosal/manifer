@@ -22,7 +22,7 @@ type listCmd struct {
 
 func NewListCommand(l io.Writer, w io.Writer, sl scenario.ScenarioLister) subcommands.Command {
 	return &listCmd{
-		logger: log.New(l, "ListCommand ", 0),
+		logger: log.New(l, "", 0),
 		writer: w,
 		lister: sl,
 	}
@@ -52,13 +52,13 @@ func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	outBytes, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
 
 	if err != nil {
-		p.logger.Printf("Error looking up scenarios: %v", err)
+		p.logger.Printf("%v\n  while looking up scenarios", err)
 		return subcommands.ExitFailure
 	}
 
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
-		p.logger.Printf("Error writing list output: %v", err)
+		p.logger.Printf("%v\n  while writing list output", err)
 		return subcommands.ExitFailure
 	}
 

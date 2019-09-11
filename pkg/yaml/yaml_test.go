@@ -39,7 +39,7 @@ func TestLoad(t *testing.T) {
 			t.Error("Load should return error if unable to read file")
 		}
 
-		expected := "Error loading yaml from doesnotexist: test"
+		expected := "test\n  while loading yaml from doesnotexist"
 		actual := err.Error()
 		if actual != expected {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expected, actual)
@@ -59,7 +59,7 @@ func TestLoad(t *testing.T) {
 			t.Error("Load should return error if yaml is not valid")
 		}
 
-		expected := "Error unmarshalling yaml from malformed: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `:::not ...` into map[string]string"
+		expected := "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `:::not ...` into map[string]string\n  while unmarshalling yaml from malformed"
 		actual := err.Error()
 		if actual != expected {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expected, actual)
@@ -104,7 +104,7 @@ func TestWrite(t *testing.T) {
 			t.Error("Write should return error if writer failed")
 		}
 
-		expected := "Error writing yaml: broken writer failed"
+		expected := "broken writer failed\n  while writing yaml"
 		actual := err.Error()
 		if actual != expected {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expected, actual)
@@ -116,13 +116,13 @@ func TestWrite(t *testing.T) {
 		defer ctrl.Finish()
 
 		writer := test.StringWriter{}
-		err := subject.Write(&writer, &Unmarshallable{})
+		err := subject.Write(&writer, &Unmarshallable{A: "foo", B: "bar"})
 
 		if err == nil {
 			t.Error("Write should return error if writer failed")
 		}
 
-		expected := "Duplicated key 'a' in struct yaml.Unmarshallable"
+		expected := "Duplicated key 'a' in struct yaml.Unmarshallable\n  while marshalling yaml: &{foo bar}"
 		actual := err.Error()
 		if actual != expected {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expected, actual)

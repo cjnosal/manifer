@@ -152,7 +152,7 @@ func TestCompose(t *testing.T) {
 				"a scenario",
 			},
 			planError:     errors.New("test"),
-			expectedError: errors.New("Unable to resolve scenarios: test"),
+			expectedError: errors.New("test\n  while trying to resolve scenarios"),
 		},
 		{
 			name:     "tempdir error",
@@ -165,7 +165,7 @@ func TestCompose(t *testing.T) {
 			},
 			plan:          planWithoutGlobals,
 			tmpError:      errors.New("test"),
-			expectedError: errors.New("Unable to create temporary directory: test"),
+			expectedError: errors.New("test\n  while trying to create temporary directory"),
 		},
 		{
 			name:     "interpolation error",
@@ -191,7 +191,7 @@ func TestCompose(t *testing.T) {
 					templateArgs: []string{},
 				},
 			},
-			expectedError: errors.New("Unable to apply snippet /snippet: test"),
+			expectedError: errors.New("test\n  while trying to apply snippet /snippet"),
 		},
 		{
 			name:     "read error",
@@ -218,7 +218,7 @@ func TestCompose(t *testing.T) {
 			},
 			outputPath:    "/tmp/composed_0.yml",
 			readError:     errors.New("test"),
-			expectedError: errors.New("Unable to read composed output: test"),
+			expectedError: errors.New("test\n  while trying to read composed output"),
 		},
 	}
 
@@ -257,7 +257,7 @@ func TestCompose(t *testing.T) {
 			}
 			out, err := subject.Compose(mockExecutor, c.template, c.libraries, c.scenarioNames, c.passthrough, c.showPlan, c.showDiff)
 
-			if !reflect.DeepEqual(c.expectedError, err) {
+			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 

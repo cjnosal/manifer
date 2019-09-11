@@ -280,7 +280,7 @@ func TestLoad(t *testing.T) {
 				"./library.yml",
 			},
 			yamlError:     errors.New("test"),
-			expectedError: errors.New("Unable to load library at ./library.yml: test"),
+			expectedError: errors.New("test\n  while trying to load library at ./library.yml"),
 		},
 	}
 
@@ -315,7 +315,7 @@ func TestLoad(t *testing.T) {
 
 			loadedLibs, err := subject.Load(c.paths)
 
-			if !reflect.DeepEqual(c.expectedError, err) {
+			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 

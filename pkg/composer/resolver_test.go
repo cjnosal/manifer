@@ -60,7 +60,7 @@ func TestResolve(t *testing.T) {
 				"a scenario",
 			},
 			yamlError:     errors.New("test"),
-			expectedError: errors.New("Unable to load libraries: test"),
+			expectedError: errors.New("test\n  while trying to load libraries"),
 		},
 		{
 			name: "yaml error",
@@ -76,7 +76,7 @@ func TestResolve(t *testing.T) {
 				},
 			},
 			resolveError:  errors.New("test"),
-			expectedError: errors.New("Unable to select scenarios: test"),
+			expectedError: errors.New("test\n  while trying to select scenarios"),
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestResolve(t *testing.T) {
 
 			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames, c.passthrough)
 
-			if !reflect.DeepEqual(c.expectedError, err) {
+			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 

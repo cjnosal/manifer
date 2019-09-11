@@ -1,6 +1,6 @@
 module github.com/cjnosal/manifer
 
-go 1.12
+go 1.13
 
 require (
 	code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c // indirect
