@@ -2,9 +2,11 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/google/subcommands"
 
@@ -14,6 +16,7 @@ import (
 type listCmd struct {
 	libraryPaths arrayFlags
 	allScenarios bool
+	printJson    bool
 
 	logger *log.Logger
 	writer io.Writer
@@ -41,6 +44,8 @@ func (p *listCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(&p.libraryPaths, "l", "Path to library file")
 	f.BoolVar(&p.allScenarios, "all", false, "Include all referenced libraries")
 	f.BoolVar(&p.allScenarios, "a", false, "Include all referenced libraries")
+	f.BoolVar(&p.printJson, "json", false, "Print output in json format")
+	f.BoolVar(&p.printJson, "j", false, "Print output in json format")
 }
 
 func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -51,11 +56,18 @@ func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitFailure
 	}
 
-	outBytes, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
+	entries, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while looking up scenarios", err)
 		return subcommands.ExitFailure
+	}
+
+	var outBytes []byte
+	if p.printJson {
+		outBytes = p.formatJson(entries)
+	} else {
+		outBytes = p.formatPlain(entries)
 	}
 
 	_, err = p.writer.Write(outBytes)
@@ -65,4 +77,24 @@ func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	}
 
 	return subcommands.ExitSuccess
+}
+
+func (p *listCmd) formatJson(entries []scenario.ScenarioEntry) []byte {
+	bytes, _ := json.Marshal(entries)
+	return bytes
+}
+
+func (p *listCmd) formatPlain(entries []scenario.ScenarioEntry) []byte {
+	builder := strings.Builder{}
+	for _, entry := range entries {
+		builder.WriteString(entry.Name)
+		builder.WriteString("\n\t")
+		description := entry.Description
+		if len(description) == 0 {
+			description = "no description"
+		}
+		builder.WriteString(description)
+		builder.WriteString("\n\n")
+	}
+	return []byte(builder.String())
 }

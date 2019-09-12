@@ -60,7 +60,7 @@ set: by_first
 	}
 }
 
-func TestList(t *testing.T) {
+func TestListPlain(t *testing.T) {
 	cmd := exec.Command(
 		"go",
 		"run",
@@ -90,6 +90,31 @@ basic
 	no description
 
 `
+
+	if writer.String() != expected {
+		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())
+	}
+}
+
+func TestListJson(t *testing.T) {
+	cmd := exec.Command(
+		"go",
+		"run",
+		"manifer.go",
+		"list",
+		"-l",
+		"../../test/data/library.yml",
+		"-j",
+	)
+	writer := &test.StringWriter{}
+	cmd.Stdout = writer
+
+	err := cmd.Run()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	expected := `[{"Name":"bizz","Description":""},{"Name":"empty","Description":""},{"Name":"placeholder","Description":""},{"Name":"basic","Description":""}]`
 
 	if writer.String() != expected {
 		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())

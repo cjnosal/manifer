@@ -2,52 +2,48 @@ package scenario
 
 import (
 	"github.com/cjnosal/manifer/pkg/library"
-	"strings"
 )
 
 type ScenarioLister interface {
-	ListScenarios(libraries []string, all bool) ([]byte, error)
+	ListScenarios(libraries []string, all bool) ([]ScenarioEntry, error)
 }
 
 type Lister struct {
 	Loader library.LibraryLoader
 }
 
-func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]byte, error) {
-	builder := strings.Builder{}
+type ScenarioEntry struct {
+	Name        string
+	Description string
+}
+
+func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]ScenarioEntry, error) {
+	entries := []ScenarioEntry{}
 	libs, err := l.Loader.Load(libraryPaths)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, lib := range libs {
-		l.printLib("", &lib, &builder, all)
+		l.printLib("", &lib, &entries, all)
 	}
 
-	return []byte(builder.String()), nil
+	return entries, nil
 }
 
-func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, builder *strings.Builder, all bool) {
+func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, entries *[]ScenarioEntry, all bool) {
 	for _, s := range lib.Library.Scenarios {
-		builder.WriteString(prefix + s.Name)
-		builder.WriteString("\n\t")
-
-		var description string
-		if s.Description != "" {
-			description = s.Description
-		} else {
-			description = "no description"
+		entry := ScenarioEntry{
+			Name:        prefix + s.Name,
+			Description: s.Description,
 		}
-		builder.WriteString(description)
-
-		builder.WriteString("\n")
-		builder.WriteString("\n")
+		*entries = append(*entries, entry)
 	}
 
 	if all {
 		for ref, lib := range lib.References {
 			refPath := prefix + ref + "."
-			l.printLib(refPath, lib, builder, all)
+			l.printLib(refPath, lib, entries, all)
 		}
 	}
 }

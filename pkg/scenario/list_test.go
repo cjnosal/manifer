@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -128,27 +129,29 @@ func TestListScenarios(t *testing.T) {
 
 		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
 
-		bytes, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
+		entries, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		outStr := string(bytes)
+		expected := []ScenarioEntry{
+			{
+				Name:        "main",
+				Description: "the default",
+			},
+			{
+				Name:        "big",
+				Description: "include everything",
+			},
+			{
+				Name:        "extra",
+				Description: "an additional scenario",
+			},
+		}
 
-		expected := `main
-	the default
-
-big
-	include everything
-
-extra
-	an additional scenario
-
-`
-
-		if expected != outStr {
-			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, outStr)
+		if !reflect.DeepEqual(expected, entries) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, entries)
 		}
 	})
 
@@ -162,33 +165,37 @@ extra
 
 		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
 
-		bytes, err := subject.ListScenarios([]string{"lib1", "lib2"}, true)
+		entries, err := subject.ListScenarios([]string{"lib1", "lib2"}, true)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		outStr := string(bytes)
+		expected := []ScenarioEntry{
+			{
+				Name:        "main",
+				Description: "the default",
+			},
+			{
+				Name:        "big",
+				Description: "include everything",
+			},
+			{
+				Name:        "ref.dependency",
+				Description: "",
+			},
+			{
+				Name:        "ref.big_dependency",
+				Description: "a bigger utility",
+			},
+			{
+				Name:        "extra",
+				Description: "an additional scenario",
+			},
+		}
 
-		expected := `main
-	the default
-
-big
-	include everything
-
-ref.dependency
-	no description
-
-ref.big_dependency
-	a bigger utility
-
-extra
-	an additional scenario
-
-`
-
-		if expected != outStr {
-			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, outStr)
+		if !reflect.DeepEqual(expected, entries) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, entries)
 		}
 	})
 
