@@ -40,16 +40,21 @@ func NewComposeCommand(l io.Writer, w io.Writer, c composer.Composer, em map[lib
 func (*composeCmd) Name() string     { return "compose" }
 func (*composeCmd) Synopsis() string { return "compose a yml file from snippets." }
 func (*composeCmd) Usage() string {
-	return `compose -t <template path> (-l <library path>...) (-s <scenario>...) [-p] [-d] [-- passthrough flags ...]:
+	return `compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...]:
   compose a yml file from snippets.
 `
 }
 
 func (p *composeCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.templatePath, "t", "", "Path to template file")
+	f.StringVar(&p.templatePath, "template", "", "Path to initial template file")
+	f.StringVar(&p.templatePath, "t", "", "Path to initial template file")
+	f.Var(&p.libraryPaths, "library", "Path to library file")
 	f.Var(&p.libraryPaths, "l", "Path to library file")
+	f.Var(&p.scenarios, "scenario", "Scenario name in library")
 	f.Var(&p.scenarios, "s", "Scenario name in library")
+	f.BoolVar(&p.showPlan, "print", false, "Show snippets and arguments being applied")
 	f.BoolVar(&p.showPlan, "p", false, "Show snippets and arguments being applied")
+	f.BoolVar(&p.showDiff, "diff", false, "Show diff after each snippet is applied")
 	f.BoolVar(&p.showDiff, "d", false, "Show diff after each snippet is applied")
 }
 

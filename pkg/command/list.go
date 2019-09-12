@@ -31,13 +31,15 @@ func NewListCommand(l io.Writer, w io.Writer, sl scenario.ScenarioLister) subcom
 func (*listCmd) Name() string     { return "list" }
 func (*listCmd) Synopsis() string { return "list scenarios in selected libraries." }
 func (*listCmd) Usage() string {
-	return `list [-a] (-l <library path>...):
+	return `list [--all] (--library <library path>...):
   list scenarios in selected libraries.
 `
 }
 
 func (p *listCmd) SetFlags(f *flag.FlagSet) {
+	f.Var(&p.libraryPaths, "library", "Path to library file")
 	f.Var(&p.libraryPaths, "l", "Path to library file")
+	f.BoolVar(&p.allScenarios, "all", false, "Include all referenced libraries")
 	f.BoolVar(&p.allScenarios, "a", false, "Include all referenced libraries")
 }
 
