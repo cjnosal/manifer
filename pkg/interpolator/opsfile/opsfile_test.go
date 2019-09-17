@@ -129,6 +129,7 @@ func TestInterpolate(t *testing.T) {
 		readTemplateError  error
 		parseArgsError     error
 		readSnippetError   error
+		parseSnippetError  error
 		writeTemplateError error
 
 		expectedError error
@@ -225,7 +226,15 @@ func TestInterpolate(t *testing.T) {
 			expectedError:    errors.New("test\n  while trying to load ops file /originalsnippet"),
 		},
 		{
-			name:            "parse snippet error",
+			name:              "parse snippet error",
+			in:                "../../../test/data/template.yml",
+			parseSnippetError: errors.New("test"),
+			snippet:           "/missingsnippet",
+			originalSnippet:   "/originalsnippet",
+			expectedError:     errors.New("test\n  while trying to parse ops file /originalsnippet"),
+		},
+		{
+			name:            "invalid snippet error",
 			in:              "../../../test/data/template.yml",
 			snippet:         "interpolated_snippet.yml",
 			originalSnippet: "opsfile.yml",
@@ -282,9 +291,12 @@ func TestInterpolate(t *testing.T) {
 			mockFile.EXPECT().Read(c.in).Times(1).Return([]byte(c.inString), c.readTemplateError)
 
 			if c.snippet != "" {
-				mockYaml.EXPECT().Load(c.snippet, &[]patch.OpDefinition{}).Times(1).Return(c.readSnippetError).Do(func(path string, o *[]patch.OpDefinition) {
-					*o = c.opDefinitions
-				})
+				mockFile.EXPECT().Read(c.snippet).Times(1).Return([]byte("bytes"), c.readSnippetError)
+				if c.readSnippetError == nil {
+					mockYaml.EXPECT().Unmarshal([]byte("bytes"), &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
+						*o = c.opDefinitions
+					})
+				}
 			}
 			if c.out != "" {
 				mockFile.EXPECT().Write(c.out, []byte(c.expectedOut), os.FileMode(0644)).Times(1).Return(c.writeTemplateError)

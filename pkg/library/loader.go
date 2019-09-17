@@ -34,11 +34,14 @@ func (l *Loader) Load(paths []string) ([]LoadedLibrary, error) {
 }
 
 func (l *Loader) loadLib(path string) (*LoadedLibrary, error) {
-
-	lib := &Library{}
-	err := l.Yaml.Load(path, lib)
+	bytes, err := l.File.Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to load library at %s", err, path)
+		return nil, fmt.Errorf("%w\n  while trying to read library at %s", err, path)
+	}
+	lib := &Library{}
+	err = l.Yaml.Unmarshal(bytes, lib)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to parse library at %s", err, path)
 	}
 
 	for i, scenario := range lib.Scenarios {

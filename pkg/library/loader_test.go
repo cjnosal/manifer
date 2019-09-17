@@ -25,6 +25,7 @@ func TestLoad(t *testing.T) {
 		expectedPaths       []string
 		expectedResolutions []resolution
 		testLibs            []Library
+		fileError           error
 		yamlError           error
 		expectedLoadedLibs  []LoadedLibrary
 		expectedError       error
@@ -272,6 +273,17 @@ func TestLoad(t *testing.T) {
 			},
 		},
 		{
+			name: "file error",
+			paths: []string{
+				"./library.yml",
+			},
+			expectedPaths: []string{
+				"./library.yml",
+			},
+			fileError:     errors.New("test"),
+			expectedError: errors.New("test\n  while trying to read library at ./library.yml"),
+		},
+		{
 			name: "yaml error",
 			paths: []string{
 				"./library.yml",
@@ -280,7 +292,7 @@ func TestLoad(t *testing.T) {
 				"./library.yml",
 			},
 			yamlError:     errors.New("test"),
-			expectedError: errors.New("test\n  while trying to load library at ./library.yml"),
+			expectedError: errors.New("test\n  while trying to parse library at ./library.yml"),
 		},
 	}
 
@@ -297,20 +309,28 @@ func TestLoad(t *testing.T) {
 			}
 
 			invocations := 0
-			if c.yamlError == nil {
-				for _, lp := range c.expectedPaths {
-					mockYaml.EXPECT().Load(lp, &Library{}).Times(1).Return(nil).Do(func(path string, lib *Library) {
-						if c.testLibs != nil && len(c.testLibs) >= invocations {
-							*lib = c.testLibs[invocations]
-							invocations++
-						}
-					})
-				}
-				for _, r := range c.expectedResolutions {
-					mockFile.EXPECT().ResolveRelativeTo(r.target, r.source).Times(1).Return(r.result)
-				}
+
+			if c.fileError != nil {
+				mockFile.EXPECT().Read(c.expectedPaths[0]).Times(1).Return(nil, c.fileError)
 			} else {
-				mockYaml.EXPECT().Load(c.expectedPaths[0], &Library{}).Times(1).Return(c.yamlError)
+				if c.yamlError != nil {
+					mockFile.EXPECT().Read(c.expectedPaths[0]).Times(1).Return([]byte("bytes"), nil)
+					mockYaml.EXPECT().Unmarshal([]byte("bytes"), &Library{}).Times(1).Return(c.yamlError)
+				} else {
+					for _, lp := range c.expectedPaths {
+						mockFile.EXPECT().Read(lp).Times(1).Return([]byte("bytes"), nil)
+						mockYaml.EXPECT().Unmarshal([]byte("bytes"), &Library{}).Times(1).Return(nil).Do(func(bytes []byte, lib *Library) {
+							if c.testLibs != nil && len(c.testLibs) >= invocations {
+								*lib = c.testLibs[invocations]
+								invocations++
+							}
+						})
+					}
+
+					for _, r := range c.expectedResolutions {
+						mockFile.EXPECT().ResolveRelativeTo(r.target, r.source).Times(1).Return(r.result)
+					}
+				}
 			}
 
 			loadedLibs, err := subject.Load(c.paths)

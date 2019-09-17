@@ -75,10 +75,13 @@ func (i *ofInt) interpolate(inPath string, outPath string, snippetPath string, o
 	opDefs := []patch.OpDefinition{}
 	ops := patch.Ops{}
 	if snippetPath != "" {
-
-		err = i.Yaml.Load(snippetPath, &opDefs)
+		bytes, err := i.File.Read(snippetPath)
 		if err != nil {
 			return fmt.Errorf("%w\n  while trying to load ops file %s", err, originalSnippetPath)
+		}
+		err = i.Yaml.Unmarshal(bytes, &opDefs)
+		if err != nil {
+			return fmt.Errorf("%w\n  while trying to parse ops file %s", err, originalSnippetPath)
 		}
 
 		ops, err = patch.NewOpsFromDefinitions(opDefs)

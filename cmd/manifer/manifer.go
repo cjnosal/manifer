@@ -24,9 +24,7 @@ func main() {
 	logger := os.Stderr
 	writer := os.Stdout
 	file := &file.FileIO{}
-	yaml := &yaml.Yaml{
-		File: file,
-	}
+	yaml := &yaml.Yaml{}
 	patch := diffmatchpatch.New()
 	diff := &diff.FileDiff{
 		File:  file,
