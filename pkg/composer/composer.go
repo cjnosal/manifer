@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/plan"
-	"path/filepath"
 )
 
 type Composer interface {
@@ -35,42 +34,36 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 		return nil, fmt.Errorf("%w\n  while trying to resolve scenarios", err)
 	}
 
-	temp, err := c.File.TempDir("", "manifer")
+	in, err := c.File.ReadAndTag(templatePath)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to create temporary directory", err)
+		return nil, fmt.Errorf("%w\n  while trying to load template %s", err, templatePath)
 	}
-	defer c.File.RemoveAll(temp)
-
-	in := templatePath
-	var out string
+	var out []byte
 
 	if len(plan.Snippets) > 0 || len(plan.GlobalArgs) > 0 {
 
-		for i, snippet := range plan.Snippets {
-			out = fmt.Sprintf(filepath.Join(temp, "composed_%d.yml"), i)
-			err = executor.Execute(showPlan, showDiff, in, out, snippet.Path, snippet.Args, plan.GlobalArgs)
+		for _, snippet := range plan.Snippets {
+			taggedSnippet, err := c.File.ReadAndTag(snippet.Path)
+			if err != nil {
+				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, snippet.Path)
+			}
+			out, err = executor.Execute(showPlan, showDiff, in, taggedSnippet, snippet.Args, plan.GlobalArgs)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, snippet.Path)
 			}
 
-			in = out
+			in = &file.TaggedBytes{Tag: in.Tag, Bytes: out}
 		}
 
 		if len(plan.GlobalArgs) > 0 {
-			out = fmt.Sprintf(filepath.Join(temp, "composed_final.yml"))
-			err = executor.Execute(showPlan, showDiff, in, out, "", nil, plan.GlobalArgs)
+			out, err = executor.Execute(showPlan, showDiff, in, nil, nil, plan.GlobalArgs)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.GlobalArgs)
 			}
 		}
 	} else {
-		out = templatePath
+		out = in.Bytes
 	}
 
-	outBytes, err := c.File.Read(out)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to read composed output", err)
-	}
-
-	return outBytes, nil
+	return out, nil
 }

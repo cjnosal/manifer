@@ -7,6 +7,7 @@ import (
 
 type Diff interface {
 	FindDiff(path1 string, path2 string) (string, error)
+	StringDiff(str1 string, str2 string) string
 }
 
 type diffMatchPatch interface {
@@ -20,16 +21,21 @@ type FileDiff struct {
 }
 
 func (f *FileDiff) FindDiff(path1 string, path2 string) (string, error) {
-	str1, err := f.File.Read(path1)
+	b1, err := f.File.Read(path1)
 	if err != nil {
 		return "", err
 	}
-	str2, err := f.File.Read(path2)
+	b2, err := f.File.Read(path2)
 	if err != nil {
 		return "", err
 	}
 
-	diffs := f.Patch.DiffMain(string(str1), string(str2), true)
+	diff := f.StringDiff(string(b1), string(b2))
 
-	return f.Patch.DiffPrettyText(diffs), nil
+	return diff, nil
+}
+
+func (f *FileDiff) StringDiff(str1 string, str2 string) string {
+	diffs := f.Patch.DiffMain(str1, str2, true)
+	return f.Patch.DiffPrettyText(diffs)
 }

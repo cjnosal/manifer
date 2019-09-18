@@ -8,6 +8,7 @@ import (
 
 type FileAccess interface {
 	Read(path string) ([]byte, error)
+	ReadAndTag(path string) (*TaggedBytes, error)
 	Write(path string, content []byte, perms os.FileMode) error
 	TempDir(dir string, prefix string) (string, error)
 	RemoveAll(dir string) error
@@ -15,6 +16,22 @@ type FileAccess interface {
 }
 
 type FileIO struct{}
+
+type TaggedBytes struct {
+	Bytes []byte
+	Tag   string
+}
+
+func (f *FileIO) ReadAndTag(path string) (*TaggedBytes, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return &TaggedBytes{
+		Bytes: bytes,
+		Tag:   path,
+	}, nil
+}
 
 func (f *FileIO) Read(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)

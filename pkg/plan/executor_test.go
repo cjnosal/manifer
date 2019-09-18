@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/cjnosal/manifer/pkg/diff"
+	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
 )
 
-func TestFindDiff(t *testing.T) {
+func TestStringDiff(t *testing.T) {
 
 	t.Run("Show plan", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -26,12 +27,16 @@ func TestFindDiff(t *testing.T) {
 			Output:       writer,
 		}
 
-		mockInterpolator.EXPECT().Interpolate("in", "out", "snippet", []string{"snippet args"}, []string{"global args"}).Times(1).Return(nil)
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+		mockInterpolator.EXPECT().Interpolate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return([]byte("bytes"), nil)
 
-		err := subject.Execute(true, false, "in", "out", "snippet", []string{"snippet args"}, []string{"global args"})
+		bytes, err := subject.Execute(true, false, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
+		} else if !reflect.DeepEqual(bytes, []byte("bytes")) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
 		expectedStep := "\nSnippet snippet; Arg [snippet args]; Global [global args]\n"
@@ -55,9 +60,11 @@ func TestFindDiff(t *testing.T) {
 		}
 
 		expectedError := errors.New("test")
-		mockInterpolator.EXPECT().Interpolate("in", "out", "snippet", []string{"snippet args"}, []string{"global args"}).Times(1).Return(expectedError)
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+		mockInterpolator.EXPECT().Interpolate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return(nil, expectedError)
 
-		err := subject.Execute(false, false, "in", "out", "snippet", []string{"snippet args"}, []string{"global args"})
+		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if !reflect.DeepEqual(expectedError, err) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
@@ -79,42 +86,21 @@ func TestFindDiff(t *testing.T) {
 		}
 
 		expectedDiff := "Diff:\ndiff"
-		mockInterpolator.EXPECT().Interpolate("in", "out", "snippet", []string{"snippet args"}, []string{"global args"}).Times(1).Return(nil)
-		mockDiff.EXPECT().FindDiff("in", "out").Times(1).Return("diff", nil)
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+		mockInterpolator.EXPECT().Interpolate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return([]byte("bytes"), nil)
+		mockDiff.EXPECT().StringDiff("foo: bar", "bytes").Times(1).Return("diff")
 
-		err := subject.Execute(false, true, "in", "out", "snippet", []string{"snippet args"}, []string{"global args"})
+		bytes, err := subject.Execute(false, true, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
+		} else if !reflect.DeepEqual(bytes, []byte("bytes")) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
 		if writer.String() != expectedDiff {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedDiff, writer.String())
-		}
-
-	})
-
-	t.Run("Diff error", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		mockDiff := diff.NewMockDiff(ctrl)
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
-		writer := &test.StringWriter{}
-		defer ctrl.Finish()
-
-		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-		}
-
-		expectedError := errors.New("test")
-		mockInterpolator.EXPECT().Interpolate("in", "out", "snippet", []string{"snippet args"}, []string{"global args"}).Times(1).Return(nil)
-		mockDiff.EXPECT().FindDiff("in", "out").Times(1).Return("", expectedError)
-
-		err := subject.Execute(false, true, "in", "out", "snippet", []string{"snippet args"}, []string{"global args"})
-
-		if !reflect.DeepEqual(expectedError, err) {
-			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 
 	})

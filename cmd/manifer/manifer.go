@@ -42,7 +42,7 @@ func main() {
 		Loader:   loader,
 		Selector: selector,
 	}
-	opsFileInterpolator := opsfile.NewOpsFileInterpolator(file, yaml)
+	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml)
 	opsFileExecutor := &plan.InterpolationExecutor{
 		Interpolator: opsFileInterpolator,
 		Diff:         diff,

@@ -3,12 +3,13 @@ package plan
 import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/diff"
+	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"io"
 )
 
 type Executor interface {
-	Execute(showPlan bool, showDiff bool, inPath string, outPath string, snippetPath string, snippetArgs []string, scenarioArgs []string) error
+	Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error)
 }
 
 type InterpolationExecutor struct {
@@ -17,22 +18,23 @@ type InterpolationExecutor struct {
 	Output       io.Writer
 }
 
-func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, inPath string, outPath string, snippetPath string, snippetArgs []string, scenarioArgs []string) error {
+func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {
+	var snippetPath string
+	if snippet != nil {
+		snippetPath = snippet.Tag
+	}
 	if showPlan {
-		out := fmt.Sprintf("\nSnippet %s; Arg %v; Global %v\n", snippetPath, snippetArgs, scenarioArgs)
+		out := fmt.Sprintf("\nSnippet %s; Arg %v; Global %v\n", snippetPath, snippetArgs, templateArgs)
 		i.Output.Write([]byte(out))
 	}
-	err := i.Interpolator.Interpolate(inPath, outPath, snippetPath, snippetArgs, scenarioArgs)
+	bytes, err := i.Interpolator.Interpolate(template, snippet, snippetArgs, templateArgs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if showDiff {
 		i.Output.Write([]byte("Diff:\n"))
-		diff, err := i.Diff.FindDiff(inPath, outPath)
-		if err != nil {
-			return err
-		}
+		diff := i.Diff.StringDiff(string(template.Bytes), string(bytes))
 		i.Output.Write([]byte(diff))
 	}
-	return nil
+	return bytes, nil
 }

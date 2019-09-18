@@ -2,7 +2,7 @@ package opsfile
 
 import (
 	"errors"
-	"os"
+	"reflect"
 	"testing"
 
 	"github.com/cppforlife/go-patch/patch"
@@ -27,40 +27,36 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 func TestWrapper(t *testing.T) {
 	cases := []struct {
 		name             string
-		in               string
-		out              string
-		snippet          string
+		in               *file.TaggedBytes
+		snippet          *file.TaggedBytes
 		snippetArgs      []string
-		scenarioArgs     []string
+		templateArgs     []string
 		intSnippetError  error
 		intTemplateError error
 		expectedError    error
 	}{
 		{
 			name:    "with snippet",
-			in:      "/template.yml",
-			out:     "/out.yml",
-			snippet: "/snippet.yml",
+			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
+			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
 			snippetArgs: []string{
 				"arg",
 			},
-			scenarioArgs: []string{
+			templateArgs: []string{
 				"another",
 			},
 		},
 		{
 			name: "no snippet",
-			in:   "/template.yml",
-			out:  "/out.yml",
-			scenarioArgs: []string{
+			in:   &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
+			templateArgs: []string{
 				"another",
 			},
 		},
 		{
 			name:    "snippet error",
-			in:      "/template.yml",
-			out:     "/out.yml",
-			snippet: "/snippet.yml",
+			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
+			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
 			snippetArgs: []string{
 				"arg",
 			},
@@ -69,13 +65,12 @@ func TestWrapper(t *testing.T) {
 		},
 		{
 			name:    "template error",
-			in:      "/template.yml",
-			out:     "/out.yml",
-			snippet: "/snippet.yml",
+			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
+			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
 			snippetArgs: []string{
 				"arg",
 			},
-			scenarioArgs: []string{
+			templateArgs: []string{
 				"another",
 			},
 			intTemplateError: errors.New("test"),
@@ -93,18 +88,24 @@ func TestWrapper(t *testing.T) {
 				interpolator: mockInt,
 			}
 
-			expectedSnippet := ""
-			if c.snippet != "" {
-				expectedSnippet = "/tmp/int_snippet.yml"
-				mockInt.EXPECT().interpolate(c.snippet, expectedSnippet, "", "", append(c.snippetArgs, c.scenarioArgs...), false).Times(1).Return(c.intSnippetError)
-			}
-			if c.intSnippetError == nil {
-				mockInt.EXPECT().interpolate(c.in, c.out, expectedSnippet, c.snippet, c.scenarioArgs, true).Times(1).Return(c.intTemplateError)
+			var intSnippet *file.TaggedBytes
+			if c.snippet != nil {
+				intSnippet = &file.TaggedBytes{Tag: c.snippet.Tag, Bytes: []byte("interpolated: snippet")}
+				mockInt.EXPECT().interpolate(c.snippet, nil, append(c.snippetArgs, c.templateArgs...), false).Times(1).Return([]byte("interpolated: snippet"), c.intSnippetError)
 			}
 
-			err := subject.Interpolate(c.in, c.out, c.snippet, c.snippetArgs, c.scenarioArgs)
+			expectedTemplate := []byte("interpolated: template")
+			if c.intSnippetError == nil {
+				mockInt.EXPECT().interpolate(c.in, intSnippet, c.templateArgs, true).Times(1).Return(expectedTemplate, c.intTemplateError)
+			}
+
+			templateBytes, err := subject.Interpolate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
 			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
+			}
+
+			if err == nil && !reflect.DeepEqual(templateBytes, expectedTemplate) {
+				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedTemplate, templateBytes)
 			}
 		})
 	}
@@ -115,70 +116,53 @@ func TestInterpolate(t *testing.T) {
 	validTemplate := "foo: bar\n\n"
 	invalidTemplate := ":::not yaml"
 	cases := []struct {
-		name            string
-		in              string
-		inString        string
-		out             string
-		snippet         string
-		originalSnippet string
-		args            []string
-		includeOps      bool
+		name       string
+		in         *file.TaggedBytes
+		snippet    *file.TaggedBytes
+		args       []string
+		includeOps bool
 
 		opDefinitions []patch.OpDefinition
 
-		readTemplateError  error
-		parseArgsError     error
-		readSnippetError   error
-		parseSnippetError  error
-		writeTemplateError error
+		parseArgsError    error
+		parseSnippetError error
 
 		expectedError error
-		expectedOut   string
+		expectedOut   []byte
 	}{
 		{
 			name:       "vars only",
-			in:         "../../../test/data/template_with_var.yml",
-			inString:   validTemplate,
-			out:        "/tmp/manifer_out.yml",
+			in:         &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
 			includeOps: true,
 			args: []string{
 				"-v",
 				"bar=bar",
 			},
-			expectedOut: "foo: bar\n",
+			expectedOut: []byte("foo: bar\n"),
 		},
 		{
-			name:            "single op",
-			in:              "../../../test/data/template.yml",
-			inString:        validTemplate,
-			out:             "/tmp/manifer_out.yml",
-			snippet:         "interpolated_snippet.yml",
-			originalSnippet: "opsfile.yml",
+			name:    "single op",
+			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			expectedOut: "bizz: bazz\nfoo: bar\n",
+			expectedOut: []byte("bizz: bazz\nfoo: bar\n"),
 		},
 		{
-			name:            "multiple ops in file",
-			in:              "../../../test/data/template.yml",
-			inString:        validTemplate,
-			out:             "/tmp/manifer_out.yml",
-			snippet:         "interpolated_snippet.yml",
-			originalSnippet: "opsfile.yml",
+			name:    "multiple ops in file",
+			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 				newOpDefinition("replace", "/bazz?", "buzz"),
 			},
-			expectedOut: "bazz: buzz\nbizz: bazz\nfoo: bar\n",
+			expectedOut: []byte("bazz: buzz\nbizz: bazz\nfoo: bar\n"),
 		},
 		{
-			name:            "ignored passthrough ops",
-			in:              "../../../test/data/template_with_var.yml",
-			inString:        validTemplate,
-			out:             "/tmp/manifer_out.yml",
-			snippet:         "interpolated_snippet.yml",
-			originalSnippet: "opsfile.yml",
+			name:    "ignored passthrough ops",
+			in:      &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
+			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
@@ -189,55 +173,37 @@ func TestInterpolate(t *testing.T) {
 				"-o",
 				"../../../test/data/opsfile_with_vars.yml",
 			},
-			expectedOut: "bizz: bazz\nfoo: bar\n",
+			expectedOut: []byte("bizz: bazz\nfoo: bar\n"),
 		},
 		{
 			name:       "include passthrough ops",
-			in:         "../../../test/data/template.yml",
-			inString:   validTemplate,
-			out:        "/tmp/manifer_out.yml",
+			in:         &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
 			includeOps: true,
 			args: []string{
 				"-o",
 				"../../../test/data/opsfile.yml",
 			},
-			expectedOut: "bazz: buzz\nbizz: bazz\nfoo: bar\n",
-		},
-		{
-			name:              "read template error",
-			in:                "/doesnotexist",
-			readTemplateError: errors.New("test"),
-			expectedError:     errors.New("test\n  while trying to load /doesnotexist"),
+			expectedOut: []byte("bazz: buzz\nbizz: bazz\nfoo: bar\n"),
 		},
 		{
 			name: "parse args error",
-			in:   "template.yml",
+			in:   &file.TaggedBytes{Tag: "template.yml", Bytes: []byte(validTemplate)},
 			args: []string{
 				"--invalid",
 			},
 			expectedError: errors.New("unknown flag `invalid'\n  while trying to parse args"),
 		},
 		{
-			name:             "read snippet error",
-			in:               "../../../test/data/template.yml",
-			readSnippetError: errors.New("test"),
-			snippet:          "/missingsnippet",
-			originalSnippet:  "/originalsnippet",
-			expectedError:    errors.New("test\n  while trying to load ops file /originalsnippet"),
-		},
-		{
 			name:              "parse snippet error",
-			in:                "../../../test/data/template.yml",
+			in:                &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
 			parseSnippetError: errors.New("test"),
-			snippet:           "/missingsnippet",
-			originalSnippet:   "/originalsnippet",
+			snippet:           &file.TaggedBytes{Tag: "/originalsnippet", Bytes: []byte(invalidTemplate)},
 			expectedError:     errors.New("test\n  while trying to parse ops file /originalsnippet"),
 		},
 		{
-			name:            "invalid snippet error",
-			in:              "../../../test/data/template.yml",
-			snippet:         "interpolated_snippet.yml",
-			originalSnippet: "opsfile.yml",
+			name:    "invalid snippet error",
+			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte("foo: bar")},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("", "", ""),
 			},
@@ -249,29 +215,13 @@ func TestInterpolate(t *testing.T) {
   while trying to create ops from definitions in opsfile.yml`),
 		},
 		{
-			name:            "../../../test/data/template evalution error",
-			in:              "invalid.yml",
-			inString:        invalidTemplate,
-			snippet:         "interpolated_snippet.yml",
-			originalSnippet: "opsfile.yml",
+			name:    "template evalution error",
+			in:      &file.TaggedBytes{Tag: "invalid.yml", Bytes: []byte(invalidTemplate)},
+			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte("foo: bar")},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
 			expectedError: errors.New("Expected to find a map at path '/bizz?' but found 'string'\n  while trying to evaluate template invalid.yml with op 0 from opsfile.yml"),
-		},
-		{
-			name:               "write error",
-			in:                 "../../../test/data/template.yml",
-			inString:           validTemplate,
-			out:                "/tmp/manifer_out.yml",
-			expectedOut:        "bizz: bazz\nfoo: bar\n",
-			writeTemplateError: errors.New("test"),
-			snippet:            "interpolated_snippet.yml",
-			originalSnippet:    "opsfile.yml",
-			opDefinitions: []patch.OpDefinition{
-				newOpDefinition("replace", "/bizz?", "bazz"),
-			},
-			expectedError: errors.New("test\n  while trying to write interpolated file /tmp/manifer_out.yml"),
 		},
 	}
 
@@ -282,30 +232,24 @@ func TestInterpolate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockYaml := yaml.NewMockYamlAccess(ctrl)
-			mockFile := file.NewMockFileAccess(ctrl)
 			subject := ofInt{
-				File: mockFile,
 				Yaml: mockYaml,
 			}
 
-			mockFile.EXPECT().Read(c.in).Times(1).Return([]byte(c.inString), c.readTemplateError)
-
-			if c.snippet != "" {
-				mockFile.EXPECT().Read(c.snippet).Times(1).Return([]byte("bytes"), c.readSnippetError)
-				if c.readSnippetError == nil {
-					mockYaml.EXPECT().Unmarshal([]byte("bytes"), &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
-						*o = c.opDefinitions
-					})
-				}
-			}
-			if c.out != "" {
-				mockFile.EXPECT().Write(c.out, []byte(c.expectedOut), os.FileMode(0644)).Times(1).Return(c.writeTemplateError)
+			if c.snippet != nil {
+				mockYaml.EXPECT().Unmarshal(c.snippet.Bytes, &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
+					*o = c.opDefinitions
+				})
 			}
 
-			err := subject.interpolate(c.in, c.out, c.snippet, c.originalSnippet, c.args, c.includeOps)
+			templateBytes, err := subject.interpolate(c.in, c.snippet, c.args, c.includeOps)
 
 			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
+			}
+
+			if err == nil && !reflect.DeepEqual(templateBytes, c.expectedOut) {
+				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedOut, templateBytes)
 			}
 		})
 	}

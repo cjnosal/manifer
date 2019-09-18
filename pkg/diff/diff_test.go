@@ -12,6 +12,39 @@ import (
 
 func TestFindDiff(t *testing.T) {
 
+	t.Run("Strings", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockFile := file.NewMockFileAccess(ctrl)
+		mockPatch := NewMockdiffMatchPatch(ctrl)
+		defer ctrl.Finish()
+
+		subject := &FileDiff{
+			File:  mockFile,
+			Patch: mockPatch,
+		}
+
+		diff := diffmatchpatch.Diff{
+
+			Type: diffmatchpatch.DiffInsert,
+			Text: "diff",
+		}
+		expectedDiff := "pretty diff"
+
+		mockPatch.EXPECT().DiffMain("content1", "content2", true).Times(1).Return([]diffmatchpatch.Diff{
+			diff,
+		})
+		mockPatch.EXPECT().DiffPrettyText([]diffmatchpatch.Diff{
+			diff,
+		}).Times(1).Return(expectedDiff)
+
+		prettyDiff := subject.StringDiff("content1", "content2")
+
+		if expectedDiff != prettyDiff {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedDiff, prettyDiff)
+		}
+
+	})
+
 	t.Run("Readable Files", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockFile := file.NewMockFileAccess(ctrl)

@@ -16,9 +16,9 @@ import (
 type interpolation struct {
 	showPlan     bool
 	showDiff     bool
-	in           string
-	out          string
-	snippet      string
+	in           *file.TaggedBytes
+	out          []byte
+	snippet      *file.TaggedBytes
 	snippetArgs  []string
 	templateArgs []string
 	err          error
@@ -52,220 +52,295 @@ func TestCompose(t *testing.T) {
 		},
 	}
 
-	cases := []struct {
-		name           string
-		template       string
-		libraries      []string
-		scenarioNames  []string
-		showPlan       bool
-		showDiff       bool
-		plan           *scenario.Plan
-		planError      error
-		interpolations []interpolation
-		passthrough    []string
-		tmpError       error
-		readError      error
-		outputPath     string
-		expectedOut    []byte
-		expectedError  error
-	}{
-		{
-			name:        "no-op template",
-			template:    "/tmp/base.yml",
-			plan:        &scenario.Plan{},
-			outputPath:  "/tmp/base.yml",
-			expectedOut: []byte("base"),
-		},
-		{
-			name:     "template and one scenario",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			plan:        planWithoutGlobals,
-			passthrough: []string{},
-			interpolations: []interpolation{
-				{
-					in:      "/tmp/base.yml",
-					out:     "/tmp/composed_0.yml",
-					snippet: "/snippet",
-					snippetArgs: []string{
-						"snippet",
-						"args",
-					},
-					templateArgs: []string{},
-				},
-			},
-			outputPath:  "/tmp/composed_0.yml",
-			expectedOut: []byte("composed"),
-		},
-		{
-			name:     "post snippet args",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			passthrough: []string{
+	t.Run("no-op template", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+
+		expectedOut := []byte("base")
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: expectedOut}
+
+		mockResolver.EXPECT().Resolve(nil, nil, nil).Times(1).Return(&scenario.Plan{}, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+
+		out, err := subject.Compose(mockExecutor, template, nil, nil, nil, false, false)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		} else {
+			if !reflect.DeepEqual(expectedOut, out) {
+				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
+			}
+		}
+	})
+
+	t.Run("template and one scenario", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		expectedOut := []byte("base")
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Snippets[0].Path, Bytes: []byte("op")}
+
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, nil).Times(1).Return(planWithoutGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithoutGlobals.Snippets[0].Args, []string{}).Times(1).Return(expectedOut, nil)
+		out, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, nil, false, false)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		} else {
+			if !reflect.DeepEqual(expectedOut, out) {
+				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
+			}
+		}
+	})
+
+	t.Run("post snippet args", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
 				"cli arg",
-			},
-			plan: planWithGlobals,
-			interpolations: []interpolation{
-				{
-					in:      "/tmp/base.yml",
-					out:     "/tmp/composed_0.yml",
-					snippet: "/snippet",
-					snippetArgs: []string{
-						"snippet",
-						"args",
-					},
-					templateArgs: []string{
-						"global arg",
-						"cli arg",
-					},
-				},
-				{
-					in:      "/tmp/composed_0.yml",
-					out:     "/tmp/composed_final.yml",
-					snippet: "",
-					templateArgs: []string{
-						"global arg",
-						"cli arg",
-					},
-				},
-			},
-			outputPath:  "/tmp/composed_final.yml",
-			expectedOut: []byte("composed"),
-		},
-		{
-			name:     "scenario resolution error",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			planError:     errors.New("test"),
-			expectedError: errors.New("test\n  while trying to resolve scenarios"),
-		},
-		{
-			name:     "tempdir error",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			plan:          planWithoutGlobals,
-			tmpError:      errors.New("test"),
-			expectedError: errors.New("test\n  while trying to create temporary directory"),
-		},
-		{
-			name:     "interpolation error",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			plan:        planWithoutGlobals,
-			passthrough: []string{},
-			interpolations: []interpolation{
-				{
-					in:      "/tmp/base.yml",
-					out:     "/tmp/composed_0.yml",
-					snippet: "/snippet",
-					snippetArgs: []string{
-						"snippet",
-						"args",
-					},
-					err:          errors.New("test"),
-					templateArgs: []string{},
-				},
-			},
-			expectedError: errors.New("test\n  while trying to apply snippet /snippet"),
-		},
-		{
-			name:     "read error",
-			template: "/tmp/base.yml",
-			libraries: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			plan:        planWithoutGlobals,
-			passthrough: []string{},
-			interpolations: []interpolation{
-				{
-					in:      "/tmp/base.yml",
-					out:     "/tmp/composed_0.yml",
-					snippet: "/snippet",
-					snippetArgs: []string{
-						"snippet",
-						"args",
-					},
-					templateArgs: []string{},
-				},
-			},
-			outputPath:    "/tmp/composed_0.yml",
-			readError:     errors.New("test"),
-			expectedError: errors.New("test\n  while trying to read composed output"),
-		},
-	}
-
-	for _, c := range cases {
-
-		t.Run(c.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockExecutor := plan.NewMockExecutor(ctrl)
-			mockResolver := NewMockScenarioResolver(ctrl)
-			mockFile := file.NewMockFileAccess(ctrl)
-			subject := ComposerImpl{
-				Resolver: mockResolver,
-				File:     mockFile,
 			}
+		expectedOut := []byte("base")
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Snippets[0].Path, Bytes: []byte("op")}
 
-			shouldLoad := true
-			for _, i := range c.interpolations {
-				if i.err != nil {
-					shouldLoad = false
-				}
-				mockExecutor.EXPECT().Execute(i.showPlan, i.showDiff, i.in, i.out, i.snippet, i.snippetArgs, i.templateArgs).Times(1).Return(i.err)
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return([]byte("transient"), nil)
+		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.GlobalArgs).Times(1).Return(expectedOut, nil)
+		out, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		} else {
+			if !reflect.DeepEqual(expectedOut, out) {
+				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
 			}
+		}
+	})
 
-			mockResolver.EXPECT().Resolve(c.libraries, c.scenarioNames, c.passthrough).Times(1).Return(c.plan, c.planError)
+	t.Run("scenario resolution error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			if c.planError == nil {
-				mockFile.EXPECT().TempDir("", "manifer").Times(1).Return("/tmp", c.tmpError)
-				if c.tmpError == nil {
-					mockFile.EXPECT().RemoveAll("/tmp")
-					if shouldLoad {
-						mockFile.EXPECT().Read(c.outputPath).Times(1).Return(c.expectedOut, c.readError)
-					}
-				}
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
+				"cli arg",
 			}
-			out, err := subject.Compose(mockExecutor, c.template, c.libraries, c.scenarioNames, c.passthrough, c.showPlan, c.showDiff)
+		template := "/tmp/base.yml"
+		resolverError := errors.New("test")
+		expectedError := errors.New("test\n  while trying to resolve scenarios")
 
-			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
-				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
-			}
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(nil, resolverError)
+		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
 
-			if err == nil {
-				if !reflect.DeepEqual(c.expectedOut, out) {
-					t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedOut, out)
-				}
+		if err == nil || err.Error() != expectedError.Error() {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+
+	t.Run("read template error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
+				"cli arg",
 			}
-		})
-	}
+		template := "/tmp/base.yml"
+		loadError := errors.New("test")
+		expectedError := errors.New("test\n  while trying to load template /tmp/base.yml")
+
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(nil, loadError)
+		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+
+		if err == nil || err.Error() != expectedError.Error() {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+
+	t.Run("load snippet error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
+				"cli arg",
+			}
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+		snippetError := errors.New("test")
+		expectedError := errors.New("test\n  while trying to load snippet /snippet")
+
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+		mockFile.EXPECT().ReadAndTag("/snippet").Times(1).Return(nil, snippetError)
+		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+
+		if err == nil || err.Error() != expectedError.Error() {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+
+	t.Run("interpolate snippet error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
+				"cli arg",
+			}
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Snippets[0].Path, Bytes: []byte("op")}
+		snippetError := errors.New("test")
+		expectedError := errors.New("test\n  while trying to apply snippet /snippet")
+
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return(nil, snippetError)
+
+		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+
+		if err == nil || err.Error() != expectedError.Error() {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+
+	t.Run("interpolate template error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockExecutor := plan.NewMockExecutor(ctrl)
+		mockResolver := NewMockScenarioResolver(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		subject := ComposerImpl{
+			Resolver: mockResolver,
+			File:     mockFile,
+		}
+		libraries := []string{
+			"/tmp/library/lib.yml",
+		}
+		scenarioNames := []string{
+			"a scenario",
+		}
+		passthrough :=
+			[]string{
+				"cli arg",
+			}
+		template := "/tmp/base.yml"
+		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Snippets[0].Path, Bytes: []byte("op")}
+		intError := errors.New("test")
+		expectedError := errors.New("test\n  while trying to apply passthrough args [global arg cli arg]")
+
+		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
+		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
+		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return([]byte("transient"), nil)
+		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.GlobalArgs).Times(1).Return(nil, intError)
+
+		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+
+		if err == nil || err.Error() != expectedError.Error() {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+
 }
