@@ -20,6 +20,9 @@ then
 	setup
 fi
 
-go build -o ./manifer -i ./cmd/manifer 
+go build -o ./manifer -i ./cmd/manifer
+result=$?
 
 popd > /dev/null
+
+exit $result
