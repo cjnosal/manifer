@@ -148,8 +148,7 @@ If multiple independant libraries are provided to the CLI all scenario names
 should be unambiguous.
 
 # build
-`./scripts/build.sh [--setup]`
-- `--setup` will `go get` required branches of forked dependencies
+`./scripts/build.sh`
 
 # test
 `./scripts/test.sh [go test flags]`

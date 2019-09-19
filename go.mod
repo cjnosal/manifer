@@ -7,7 +7,7 @@ require (
 	github.com/bmatcuk/doublestar v1.1.5 // indirect
 	github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1 // indirect
 	github.com/cheggaaa/pb v0.0.0-20190702094313-40231cf7fa00 // indirect
-	github.com/cloudfoundry/bosh-cli v6.0.1-0.20190829021415-fe482f05bc5a+incompatible
+	github.com/cloudfoundry/bosh-cli v6.1.0+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20190824100155-2bd955afd080 // indirect
 	github.com/cloudfoundry/config-server v0.1.19 // indirect
 	github.com/cloudfoundry/go-socks5 v0.0.0-20180221174514-54f73bdb8a8e // indirect
