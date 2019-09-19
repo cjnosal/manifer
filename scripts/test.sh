@@ -5,13 +5,14 @@ pushd `dirname $0`/.. > /dev/null
 go list github.com/golang/mock/mockgen >/dev/null || go install github.com/golang/mock/mockgen
 
 function mock {
+	set -e
 	path=$1
 
 	# prepend mock to filename
 	mockfile=$(echo $path | sed -E 's/(.*)\/([^/]+)\/([^/]+).go/\1\/\2\/mock_\3.go/')
 
 	# extract folder name
-	packagename=$(echo $path  | sed -E 's/\.\/(.*)\/([^/]+)\/([^/]+).go/\2/')
+	packagename=$(echo $path  | sed -E 's/(.*)\/([^/]+)\/([^/]+).go/\2/')
 
 	$GOPATH/bin/mockgen -source $path -destination $mockfile -package $packagename
 
