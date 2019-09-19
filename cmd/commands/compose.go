@@ -1,4 +1,4 @@
-package command
+package commands
 
 import (
 	"context"
@@ -8,9 +8,7 @@ import (
 
 	"github.com/google/subcommands"
 
-	"github.com/cjnosal/manifer/pkg/composer"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/lib"
 )
 
 type composeCmd struct {
@@ -21,19 +19,17 @@ type composeCmd struct {
 	showPlan     bool
 	showDiff     bool
 
-	composer  composer.Composer
-	executors map[library.Type]plan.Executor
+	manifer lib.Manifer
 
 	logger *log.Logger
 	writer io.Writer
 }
 
-func NewComposeCommand(l io.Writer, w io.Writer, c composer.Composer, em map[library.Type]plan.Executor) subcommands.Command {
+func NewComposeCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
 	return &composeCmd{
-		logger:    log.New(l, "", 0),
-		writer:    w,
-		composer:  c,
-		executors: em,
+		logger:  log.New(l, "", 0),
+		writer:  w,
+		manifer: m,
 	}
 }
 
@@ -66,8 +62,7 @@ func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	// TODO load libary, use type to select interpolator
-	outBytes, err := p.composer.Compose(p.executors[library.OpsFile],
+	outBytes, err := p.manifer.Compose(
 		p.templatePath,
 		p.libraryPaths,
 		p.scenarios,

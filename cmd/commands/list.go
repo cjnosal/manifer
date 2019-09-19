@@ -1,4 +1,4 @@
-package command
+package commands
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/subcommands"
 
+	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/scenario"
 )
 
@@ -18,16 +19,16 @@ type listCmd struct {
 	allScenarios bool
 	printJson    bool
 
-	logger *log.Logger
-	writer io.Writer
-	lister scenario.ScenarioLister
+	logger  *log.Logger
+	writer  io.Writer
+	manifer lib.Manifer
 }
 
-func NewListCommand(l io.Writer, w io.Writer, sl scenario.ScenarioLister) subcommands.Command {
+func NewListCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
 	return &listCmd{
-		logger: log.New(l, "", 0),
-		writer: w,
-		lister: sl,
+		logger:  log.New(l, "", 0),
+		writer:  w,
+		manifer: m,
 	}
 }
 
@@ -56,7 +57,7 @@ func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitFailure
 	}
 
-	entries, err := p.lister.ListScenarios(p.libraryPaths, p.allScenarios)
+	entries, err := p.manifer.ListScenarios(p.libraryPaths, p.allScenarios)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while looking up scenarios", err)

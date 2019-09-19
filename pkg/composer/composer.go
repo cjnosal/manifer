@@ -7,7 +7,7 @@ import (
 )
 
 type Composer interface {
-	Compose(executor plan.Executor,
+	Compose(
 		templatePath string,
 		libraryPaths []string,
 		scenarioNames []string,
@@ -17,11 +17,12 @@ type Composer interface {
 }
 
 type ComposerImpl struct {
+	Executor plan.Executor
 	Resolver ScenarioResolver
 	File     file.FileAccess
 }
 
-func (c *ComposerImpl) Compose(executor plan.Executor,
+func (c *ComposerImpl) Compose(
 	templatePath string,
 	libraryPaths []string,
 	scenarioNames []string,
@@ -47,7 +48,7 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, snippet.Path)
 			}
-			out, err = executor.Execute(showPlan, showDiff, in, taggedSnippet, snippet.Args, plan.GlobalArgs)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, snippet.Args, plan.GlobalArgs)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, snippet.Path)
 			}
@@ -56,7 +57,7 @@ func (c *ComposerImpl) Compose(executor plan.Executor,
 		}
 
 		if len(plan.GlobalArgs) > 0 {
-			out, err = executor.Execute(showPlan, showDiff, in, nil, nil, plan.GlobalArgs)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, nil, plan.GlobalArgs)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.GlobalArgs)
 			}

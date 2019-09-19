@@ -62,6 +62,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 
 		expectedOut := []byte("base")
@@ -71,7 +72,7 @@ func TestCompose(t *testing.T) {
 		mockResolver.EXPECT().Resolve(nil, nil, nil).Times(1).Return(&scenario.Plan{}, nil)
 		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
 
-		out, err := subject.Compose(mockExecutor, template, nil, nil, nil, false, false)
+		out, err := subject.Compose(template, nil, nil, nil, false, false)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -92,6 +93,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -108,7 +110,7 @@ func TestCompose(t *testing.T) {
 		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithoutGlobals.Snippets[0].Args, []string{}).Times(1).Return(expectedOut, nil)
-		out, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, nil, false, false)
+		out, err := subject.Compose(template, libraries, scenarioNames, nil, false, false)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -129,6 +131,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -150,7 +153,7 @@ func TestCompose(t *testing.T) {
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return([]byte("transient"), nil)
 		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.GlobalArgs).Times(1).Return(expectedOut, nil)
-		out, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		out, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -171,6 +174,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -187,7 +191,7 @@ func TestCompose(t *testing.T) {
 		expectedError := errors.New("test\n  while trying to resolve scenarios")
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(nil, resolverError)
-		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err == nil || err.Error() != expectedError.Error() {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
@@ -204,6 +208,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -221,7 +226,7 @@ func TestCompose(t *testing.T) {
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(nil, loadError)
-		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err == nil || err.Error() != expectedError.Error() {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
@@ -238,6 +243,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -257,7 +263,7 @@ func TestCompose(t *testing.T) {
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(template).Times(1).Return(taggedTemplate, nil)
 		mockFile.EXPECT().ReadAndTag("/snippet").Times(1).Return(nil, snippetError)
-		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err == nil || err.Error() != expectedError.Error() {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
@@ -274,6 +280,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -296,7 +303,7 @@ func TestCompose(t *testing.T) {
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return(nil, snippetError)
 
-		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err == nil || err.Error() != expectedError.Error() {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
@@ -313,6 +320,7 @@ func TestCompose(t *testing.T) {
 		subject := ComposerImpl{
 			Resolver: mockResolver,
 			File:     mockFile,
+			Executor: mockExecutor,
 		}
 		libraries := []string{
 			"/tmp/library/lib.yml",
@@ -336,7 +344,7 @@ func TestCompose(t *testing.T) {
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Snippets[0].Args, planWithGlobals.GlobalArgs).Times(1).Return([]byte("transient"), nil)
 		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.GlobalArgs).Times(1).Return(nil, intError)
 
-		_, err := subject.Compose(mockExecutor, template, libraries, scenarioNames, passthrough, false, false)
+		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
 		if err == nil || err.Error() != expectedError.Error() {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
