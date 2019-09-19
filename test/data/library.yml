@@ -2,14 +2,17 @@ type: opsfile
 
 scenarios:
 - name: bizz
+  description: "adds an op"
   snippets:
   - path: ./opsfile.yml
 
 - name: empty
+  description: "contributes nothing"
   snippets:
   - path: ./empty_opsfile.yml
 
 - name: placeholder
+  description: "replaces placeholder values"
   scenarios:
   - name: basic
     args:
@@ -35,6 +38,7 @@ scenarios:
     - value2=by_second
 
 - name: basic
+  description: "a starting point"
   args:
   - -v 
   - path1=/base1?

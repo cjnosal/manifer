@@ -153,3 +153,44 @@ should be unambiguous.
 # test
 `./scripts/test.sh [go test flags]`
 - `-count=1` can be used to disable test caching of integration tests in `cmd/manifer`
+
+# import
+`lib.Manifer` can be imported to list scenarios or compose yaml
+
+```
+package main
+
+import (
+  "os"
+  "fmt"
+  "github.com/cjnosal/manifer/lib"
+)
+
+func main() {
+  logger := os.Stderr
+  output := os.Stdout
+  manifer := lib.NewManifer(logger)
+
+  // starting yaml file
+  template := "test/data/template.yml"
+
+  // collection of scenarios
+  libraries := []string{"test/data/library.yml"}
+
+  // sets of ops files to apply
+  scenarios := []string{"placeholder"}
+
+  // arguments to pass through to `bosh interpolate`
+  interpolationArgs := []string{"-vpath3=/foo", "-vvalue3=tweaks"}
+
+  // list scenario names with descriptions
+  scenarioSummary, err := manifer.ListScenarios(libraries, false)
+  logger.Write([]byte(fmt.Sprintf("%v\n", scenarioSummary)))
+  logger.Write([]byte(fmt.Sprintf("%v\n", err)))
+
+  // apply ops files from the selected scenarios to the provided template
+  composedYaml, err := manifer.Compose(template, libraries, scenarios, interpolationArgs, false, false)
+  output.Write(composedYaml)
+  logger.Write([]byte(fmt.Sprintf("%v\n", err)))
+}
+```
