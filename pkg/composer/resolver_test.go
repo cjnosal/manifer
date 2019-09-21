@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
+	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/scenario"
 )
@@ -21,6 +22,8 @@ func TestResolve(t *testing.T) {
 		yamlError         error
 		expectedLibraries []library.LoadedLibrary
 		resolveError      error
+		expectedSnippets  []string
+		parseError        error
 		expectedPlan      *scenario.Plan
 		expectedError     error
 	}{
@@ -35,6 +38,7 @@ func TestResolve(t *testing.T) {
 			passthrough: []string{
 				"extra",
 			},
+			expectedSnippets: []string{},
 			expectedLibraries: []library.LoadedLibrary{
 				{
 					Path: "./lib/lib.yml",
@@ -52,6 +56,56 @@ func TestResolve(t *testing.T) {
 			},
 		},
 		{
+			name: "append passthrough snippets",
+			libraryPaths: []string{
+				"/tmp/library/lib.yml",
+			},
+			scenarioNames: []string{
+				"a scenario",
+			},
+			passthrough: []string{
+				"extra",
+			},
+			expectedSnippets: []string{"foo"},
+			expectedLibraries: []library.LoadedLibrary{
+				{
+					Path: "./lib/lib.yml",
+				},
+			},
+			expectedPlan: &scenario.Plan{
+				GlobalArgs: []string{
+					"extra",
+				},
+				Snippets: []library.Snippet{
+					{
+						Path: "./lib/snippet.yml",
+					},
+					{
+						Path: "foo",
+					},
+				},
+			},
+		},
+		{
+			name: "passthrough snippets error",
+			libraryPaths: []string{
+				"/tmp/library/lib.yml",
+			},
+			scenarioNames: []string{
+				"a scenario",
+			},
+			passthrough: []string{
+				"extra",
+			},
+			parseError: errors.New("test"),
+			expectedLibraries: []library.LoadedLibrary{
+				{
+					Path: "./lib/lib.yml",
+				},
+			},
+			expectedError: errors.New("test\n  while trying to resolve extra snippets"),
+		},
+		{
 			name: "yaml error",
 			libraryPaths: []string{
 				"/tmp/library/lib.yml",
@@ -63,7 +117,7 @@ func TestResolve(t *testing.T) {
 			expectedError: errors.New("test\n  while trying to load libraries"),
 		},
 		{
-			name: "yaml error",
+			name: "resolve error",
 			libraryPaths: []string{
 				"/tmp/library/lib.yml",
 			},
@@ -88,15 +142,20 @@ func TestResolve(t *testing.T) {
 
 			mockLoader := library.NewMockLibraryLoader(ctrl)
 			mockSelector := scenario.NewMockScenarioSelector(ctrl)
+			mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 
 			mockLoader.EXPECT().Load(c.libraryPaths).Times(1).Return(c.expectedLibraries, c.yamlError)
 			if c.yamlError == nil {
 				mockSelector.EXPECT().SelectScenarios(c.scenarioNames, c.expectedLibraries).Times(1).Return(c.expectedPlan, c.resolveError)
+				if c.resolveError == nil {
+					mockInterpolator.EXPECT().ParseSnippetFlags(c.passthrough).Times(1).Return(c.expectedSnippets, c.parseError)
+				}
 			}
 
 			subject := Resolver{
-				Loader:   mockLoader,
-				Selector: mockSelector,
+				Loader:          mockLoader,
+				Selector:        mockSelector,
+				SnippetResolver: mockInterpolator,
 			}
 
 			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames, c.passthrough)

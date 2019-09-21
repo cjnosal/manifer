@@ -24,6 +24,50 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 	}
 }
 
+func TestParseSnippetFlags(t *testing.T) {
+
+	t.Run("op files", func(t *testing.T) {
+		subject := interpolatorWrapper{}
+		flags := []string{"-ofoo", "-o", "bar", "--ops-file=bizz"}
+		paths, err := subject.ParseSnippetFlags(flags)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		expectedPaths := []string{"foo", "bar", "bizz"}
+		if !reflect.DeepEqual(expectedPaths, paths) {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedPaths, paths)
+		}
+	})
+
+	t.Run("ignore other flags", func(t *testing.T) {
+		subject := interpolatorWrapper{}
+		flags := []string{"-ofoo", "-vbar"}
+		paths, err := subject.ParseSnippetFlags(flags)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		expectedPaths := []string{"foo"}
+		if !reflect.DeepEqual(expectedPaths, paths) {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedPaths, paths)
+		}
+	})
+
+	t.Run("parse error", func(t *testing.T) {
+		subject := interpolatorWrapper{}
+		flags := []string{"-o"}
+		_, err := subject.ParseSnippetFlags(flags)
+
+		expectedError := "expected argument for flag `-o, --ops-file'\n  while trying to parse opsfile args"
+		if err == nil || err.Error() != expectedError {
+			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+	})
+}
+
 func TestWrapper(t *testing.T) {
 	cases := []struct {
 		name             string
@@ -91,12 +135,12 @@ func TestWrapper(t *testing.T) {
 			var intSnippet *file.TaggedBytes
 			if c.snippet != nil {
 				intSnippet = &file.TaggedBytes{Tag: c.snippet.Tag, Bytes: []byte("interpolated: snippet")}
-				mockInt.EXPECT().interpolate(c.snippet, nil, append(c.snippetArgs, c.templateArgs...), false).Times(1).Return([]byte("interpolated: snippet"), c.intSnippetError)
+				mockInt.EXPECT().interpolate(c.snippet, nil, append(c.snippetArgs, c.templateArgs...)).Times(1).Return([]byte("interpolated: snippet"), c.intSnippetError)
 			}
 
 			expectedTemplate := []byte("interpolated: template")
 			if c.intSnippetError == nil {
-				mockInt.EXPECT().interpolate(c.in, intSnippet, c.templateArgs, true).Times(1).Return(expectedTemplate, c.intTemplateError)
+				mockInt.EXPECT().interpolate(c.in, intSnippet, c.templateArgs).Times(1).Return(expectedTemplate, c.intTemplateError)
 			}
 
 			templateBytes, err := subject.Interpolate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
@@ -116,11 +160,10 @@ func TestInterpolate(t *testing.T) {
 	validTemplate := "foo: bar\n\n"
 	invalidTemplate := ":::not yaml"
 	cases := []struct {
-		name       string
-		in         *file.TaggedBytes
-		snippet    *file.TaggedBytes
-		args       []string
-		includeOps bool
+		name    string
+		in      *file.TaggedBytes
+		snippet *file.TaggedBytes
+		args    []string
 
 		opDefinitions []patch.OpDefinition
 
@@ -131,9 +174,8 @@ func TestInterpolate(t *testing.T) {
 		expectedOut   []byte
 	}{
 		{
-			name:       "vars only",
-			in:         &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
-			includeOps: true,
+			name: "vars only",
+			in:   &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
 			args: []string{
 				"-v",
 				"bar=bar",
@@ -166,7 +208,6 @@ func TestInterpolate(t *testing.T) {
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
 			},
-			includeOps: false,
 			args: []string{
 				"-v",
 				"bar=bar",
@@ -174,16 +215,6 @@ func TestInterpolate(t *testing.T) {
 				"../../../test/data/opsfile_with_vars.yml",
 			},
 			expectedOut: []byte("bizz: bazz\nfoo: bar\n"),
-		},
-		{
-			name:       "include passthrough ops",
-			in:         &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
-			includeOps: true,
-			args: []string{
-				"-o",
-				"../../../test/data/opsfile.yml",
-			},
-			expectedOut: []byte("bazz: buzz\nbizz: bazz\nfoo: bar\n"),
 		},
 		{
 			name: "parse args error",
@@ -242,7 +273,7 @@ func TestInterpolate(t *testing.T) {
 				})
 			}
 
-			templateBytes, err := subject.interpolate(c.in, c.snippet, c.args, c.includeOps)
+			templateBytes, err := subject.interpolate(c.in, c.snippet, c.args)
 
 			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

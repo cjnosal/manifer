@@ -82,11 +82,12 @@ func newComposer(logger io.Writer) composer.Composer {
 		File: file,
 		Yaml: yaml,
 	}
-	resolver := &composer.Resolver{
-		Loader:   loader,
-		Selector: selector,
-	}
 	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml)
+	resolver := &composer.Resolver{
+		Loader:          loader,
+		Selector:        selector,
+		SnippetResolver: opsFileInterpolator,
+	}
 	opsFileExecutor := &plan.InterpolationExecutor{
 		Interpolator: opsFileInterpolator,
 		Diff:         diff,
