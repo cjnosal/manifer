@@ -78,16 +78,16 @@ func TestListPlain(t *testing.T) {
 	}
 
 	expected := `bizz
-	no description
+	adds an op
 
 empty
-	no description
+	contributes nothing
 
 placeholder
-	no description
+	replaces placeholder values
 
 basic
-	no description
+	a starting point
 
 `
 
@@ -114,7 +114,7 @@ func TestListJson(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expected := `[{"Name":"bizz","Description":""},{"Name":"empty","Description":""},{"Name":"placeholder","Description":""},{"Name":"basic","Description":""}]`
+	expected := `[{"Name":"bizz","Description":"adds an op"},{"Name":"empty","Description":"contributes nothing"},{"Name":"placeholder","Description":"replaces placeholder values"},{"Name":"basic","Description":"a starting point"}]`
 
 	if writer.String() != expected {
 		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())
