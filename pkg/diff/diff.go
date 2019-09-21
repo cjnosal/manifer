@@ -36,6 +36,9 @@ func (f *FileDiff) FindDiff(path1 string, path2 string) (string, error) {
 }
 
 func (f *FileDiff) StringDiff(str1 string, str2 string) string {
+	if str1 == str2 {
+		return ""
+	}
 	diffs := f.Patch.DiffMain(str1, str2, true)
 	return f.Patch.DiffPrettyText(diffs)
 }

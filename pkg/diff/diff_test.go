@@ -42,7 +42,16 @@ func TestFindDiff(t *testing.T) {
 		if expectedDiff != prettyDiff {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedDiff, prettyDiff)
 		}
+	})
 
+	t.Run("Identical Strings", func(t *testing.T) {
+		subject := &FileDiff{}
+
+		diff := subject.StringDiff("content1", "content1")
+		expectedDiff := ""
+		if expectedDiff != diff {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedDiff, diff)
+		}
 	})
 
 	t.Run("Readable Files", func(t *testing.T) {
