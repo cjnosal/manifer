@@ -16,7 +16,6 @@ import (
 
 type searchCmd struct {
 	libraryPaths arrayFlags
-	allScenarios bool
 	printJson    bool
 
 	logger  *log.Logger
@@ -57,7 +56,7 @@ func (p *searchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitFailure
 	}
 
-	entries, err := p.manifer.ListScenarios(p.libraryPaths, p.allScenarios)
+	entries, err := p.manifer.ListScenarios(p.libraryPaths, true)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while looking up scenarios", err)
