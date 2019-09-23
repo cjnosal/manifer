@@ -118,3 +118,62 @@ func TestListJson(t *testing.T) {
 		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())
 	}
 }
+
+func TestSearchPlain(t *testing.T) {
+	cmd := exec.Command(
+		"go",
+		"run",
+		"manifer.go",
+		"search",
+		"-l",
+		"../../test/data/library.yml",
+		"bizz",
+		"contributes",
+	)
+	writer := &test.StringWriter{}
+	cmd.Stdout = writer
+
+	err := cmd.Run()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	expected := `bizz
+	adds an op
+
+empty
+	contributes nothing
+
+`
+
+	if writer.String() != expected {
+		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())
+	}
+}
+
+func TestSearchJson(t *testing.T) {
+	cmd := exec.Command(
+		"go",
+		"run",
+		"manifer.go",
+		"search",
+		"-l",
+		"../../test/data/library.yml",
+		"-j",
+		"bizz",
+		"contributes",
+	)
+	writer := &test.StringWriter{}
+	cmd.Stdout = writer
+
+	err := cmd.Run()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	expected := `[{"Name":"bizz","Description":"adds an op"},{"Name":"empty","Description":"contributes nothing"}]`
+
+	if writer.String() != expected {
+		t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, writer.String())
+	}
+}
