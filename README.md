@@ -6,6 +6,14 @@ can be organized into a 'library'. The 'template' is now only
 responsible for simplified high level definitions. Running `manifer` will 
 combine the library and template to compose the final document.
 
+# glossary
+- template:    an arbitrary yaml file to be modified
+- snippet:     a file used to modify the template (e.g. BOSH ops files)
+- scenario:    a named collection of snippets that should be used together
+- library:     manifer's yaml file format that defines a collection of scenarios
+- interpolate: apply a snippet to the template
+- compose:     interpolate for all snippets defined in a set of scenarios
+
 # subcommands
 ## list
 ```
