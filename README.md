@@ -30,6 +30,18 @@ combine the library and template to compose the final document.
   -library value
         Path to library file
 ```
+## search
+```
+./manifer search (--library <library path>...) (query...):
+  search scenarios in selected libraries by name and description.
+  -j    Print output in json format
+  -json
+        Print output in json format
+  -l value
+        Path to library file
+  -library value
+        Path to library file
+```
 ## compose
 ```
 ./manifer compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...]:
