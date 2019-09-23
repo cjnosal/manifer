@@ -20,7 +20,7 @@ func TestResolve(t *testing.T) {
 		scenarioNames     []string
 		passthrough       []string
 		yamlError         error
-		expectedLibraries []library.LoadedLibrary
+		expectedLibraries *library.LoadedLibrary
 		resolveError      error
 		expectedSnippets  []string
 		parseError        error
@@ -38,12 +38,8 @@ func TestResolve(t *testing.T) {
 			passthrough: []string{
 				"extra",
 			},
-			expectedSnippets: []string{},
-			expectedLibraries: []library.LoadedLibrary{
-				{
-					Path: "./lib/lib.yml",
-				},
-			},
+			expectedSnippets:  []string{},
+			expectedLibraries: &library.LoadedLibrary{},
 			expectedPlan: &scenario.Plan{
 				GlobalArgs: []string{
 					"extra",
@@ -66,12 +62,8 @@ func TestResolve(t *testing.T) {
 			passthrough: []string{
 				"extra",
 			},
-			expectedSnippets: []string{"foo"},
-			expectedLibraries: []library.LoadedLibrary{
-				{
-					Path: "./lib/lib.yml",
-				},
-			},
+			expectedSnippets:  []string{"foo"},
+			expectedLibraries: &library.LoadedLibrary{},
 			expectedPlan: &scenario.Plan{
 				GlobalArgs: []string{
 					"extra",
@@ -97,13 +89,9 @@ func TestResolve(t *testing.T) {
 			passthrough: []string{
 				"extra",
 			},
-			parseError: errors.New("test"),
-			expectedLibraries: []library.LoadedLibrary{
-				{
-					Path: "./lib/lib.yml",
-				},
-			},
-			expectedError: errors.New("test\n  while trying to resolve extra snippets"),
+			parseError:        errors.New("test"),
+			expectedLibraries: &library.LoadedLibrary{},
+			expectedError:     errors.New("test\n  while trying to resolve extra snippets"),
 		},
 		{
 			name: "yaml error",
@@ -124,13 +112,9 @@ func TestResolve(t *testing.T) {
 			scenarioNames: []string{
 				"a scenario",
 			},
-			expectedLibraries: []library.LoadedLibrary{
-				{
-					Path: "./lib/lib.yml",
-				},
-			},
-			resolveError:  errors.New("test"),
-			expectedError: errors.New("test\n  while trying to select scenarios"),
+			expectedLibraries: &library.LoadedLibrary{},
+			resolveError:      errors.New("test"),
+			expectedError:     errors.New("test\n  while trying to select scenarios"),
 		},
 	}
 

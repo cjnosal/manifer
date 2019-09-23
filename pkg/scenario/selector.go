@@ -12,21 +12,19 @@ type Plan struct {
 }
 
 type ScenarioSelector interface {
-	SelectScenarios(scenarioNames []string, libraries []library.LoadedLibrary) (*Plan, error)
+	SelectScenarios(scenarioNames []string, loaded *library.LoadedLibrary) (*Plan, error)
 }
 
-type Selector struct {
-	Lookup library.LibraryLookup
-}
+type Selector struct{}
 
-func (selector *Selector) SelectScenarios(scenarioNames []string, libraries []library.LoadedLibrary) (*Plan, error) {
+func (selector *Selector) SelectScenarios(scenarioNames []string, loaded *library.LoadedLibrary) (*Plan, error) {
 	plan := &Plan{
 		GlobalArgs: []string{},
 		Snippets:   []library.Snippet{},
 	}
 
 	for _, name := range scenarioNames {
-		err := selector.updatePlan(name, libraries, plan, []string{})
+		err := selector.updatePlan(name, loaded, plan, []string{}, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -35,25 +33,26 @@ func (selector *Selector) SelectScenarios(scenarioNames []string, libraries []li
 	return plan, nil
 }
 
-func (selector *Selector) updatePlan(scenarioName string, libraries []library.LoadedLibrary, plan *Plan, parentArgs []string) error {
+func (selector *Selector) updatePlan(scenarioName string, loaded *library.LoadedLibrary, plan *Plan, parentArgs []string, parentLib *library.Library) error {
 
-	lib, err := selector.Lookup.GetContainingLibrary(scenarioName, libraries)
-	if err != nil {
-		return err
+	var rootScenario *library.Scenario
+	var lib *library.Library
+	if parentLib != nil {
+		rootScenario, lib = loaded.GetScenarioFromLib(parentLib, scenarioName)
+	} else {
+		rootScenario, lib = loaded.GetScenario(scenarioName)
 	}
-
-	path := library.SplitName(scenarioName)
-	name := path[len(path)-1]
-
-	rootScenario := selector.getScenario(name, lib)
+	if rootScenario == nil {
+		return fmt.Errorf("Unable to resolve scenario %s", scenarioName)
+	}
 
 	for _, dep := range rootScenario.Scenarios {
 		args := dep.Args
 		args = append(args, rootScenario.Args...)
 		args = append(args, parentArgs...)
-		err := selector.updatePlan(dep.Name, []library.LoadedLibrary{*lib}, plan, args)
+		err := selector.updatePlan(dep.Name, loaded, plan, args, lib)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  while resolving scenario %s", err, scenarioName)
 		}
 	}
 
@@ -70,14 +69,4 @@ func (selector *Selector) updatePlan(scenarioName string, libraries []library.Lo
 	}
 
 	return nil
-}
-
-func (selector *Selector) getScenario(name string, lib *library.LoadedLibrary) *library.Scenario {
-	for _, s := range lib.Library.Scenarios {
-		if s.Name == name {
-			return &s
-		}
-	}
-
-	panic(fmt.Sprintf("Unable to find scenario %s in %s", name, lib.Path)) // library.Lookup returned wrong library
 }

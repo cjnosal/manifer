@@ -12,7 +12,8 @@ type FileAccess interface {
 	Write(path string, content []byte, perms os.FileMode) error
 	TempDir(dir string, prefix string) (string, error)
 	RemoveAll(dir string) error
-	ResolveRelativeTo(targetFile string, sourceFile string) string
+	ResolveRelativeTo(targetFile string, sourceFile string) (string, error)
+	GetWorkingDirectory() (string, error)
 }
 
 type FileIO struct{}
@@ -49,10 +50,22 @@ func (f *FileIO) RemoveAll(dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) string {
+func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) (string, error) {
 	if filepath.IsAbs(targetFile) {
-		return targetFile
+		return targetFile, nil
 	} else {
-		return filepath.Join(filepath.Dir(sourceFile), filepath.Clean(targetFile))
+		dir := sourceFile
+		dirInfo, err := os.Stat(dir)
+		if err != nil {
+			return "", err
+		}
+		if !dirInfo.IsDir() {
+			dir = filepath.Dir(sourceFile)
+		}
+		return filepath.Clean(filepath.Join(dir, targetFile)), nil
 	}
+}
+
+func (f *FileIO) GetWorkingDirectory() (string, error) {
+	return os.Getwd()
 }

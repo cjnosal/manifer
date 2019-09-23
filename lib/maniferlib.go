@@ -74,10 +74,7 @@ func newComposer(logger io.Writer) composer.Composer {
 		File:  file,
 		Patch: patch,
 	}
-	lookup := &library.Lookup{}
-	selector := &scenario.Selector{
-		Lookup: lookup,
-	}
+	selector := &scenario.Selector{}
 	loader := &library.Loader{
 		File: file,
 		Yaml: yaml,

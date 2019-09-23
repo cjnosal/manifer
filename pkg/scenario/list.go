@@ -19,20 +19,20 @@ type ScenarioEntry struct {
 
 func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]ScenarioEntry, error) {
 	entries := []ScenarioEntry{}
-	libs, err := l.Loader.Load(libraryPaths)
+	loadedLibrary, err := l.Loader.Load(libraryPaths)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, lib := range libs {
-		l.printLib("", &lib, &entries, all)
+	for _, lib := range loadedLibrary.TopLibraries {
+		l.printLib("", lib, &entries, loadedLibrary, all)
 	}
 
 	return entries, nil
 }
 
-func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, entries *[]ScenarioEntry, all bool) {
-	for _, s := range lib.Library.Scenarios {
+func (l *Lister) printLib(prefix string, lib *library.Library, entries *[]ScenarioEntry, loadedLibrary *library.LoadedLibrary, all bool) {
+	for _, s := range lib.Scenarios {
 		entry := ScenarioEntry{
 			Name:        prefix + s.Name,
 			Description: s.Description,
@@ -41,9 +41,9 @@ func (l *Lister) printLib(prefix string, lib *library.LoadedLibrary, entries *[]
 	}
 
 	if all {
-		for ref, lib := range lib.References {
-			refPath := prefix + ref + "."
-			l.printLib(refPath, lib, entries, all)
+		for _, ref := range lib.Libraries {
+			prefix := prefix + ref.Alias + "."
+			l.printLib(prefix, loadedLibrary.GetAliasedLibrary(lib, ref.Alias), entries, loadedLibrary, all)
 		}
 	}
 }

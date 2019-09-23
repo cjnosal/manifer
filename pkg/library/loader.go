@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/yaml"
+	"strings"
 )
 
 type LibraryLoader interface {
-	Load(paths []string) ([]LoadedLibrary, error)
+	Load(paths []string) (*LoadedLibrary, error)
 }
 
 type Loader struct {
@@ -16,53 +17,112 @@ type Loader struct {
 }
 
 type LoadedLibrary struct {
-	Path       string
-	Library    *Library
-	References map[string]*LoadedLibrary
+	TopLibraries []*Library
+	Libraries    map[string]*Library
 }
 
-func (l *Loader) Load(paths []string) ([]LoadedLibrary, error) {
-	loaded := []LoadedLibrary{}
-	for _, p := range paths {
-		loadedLib, err := l.loadLib(p)
-		if err != nil {
-			return nil, err
+func (l *LoadedLibrary) GetScenario(name string) (*Scenario, *Library) {
+	for _, lib := range l.TopLibraries {
+		scenario, foundIn := l.GetScenarioFromLib(lib, name)
+		if scenario != nil {
+			return scenario, foundIn
 		}
-		loaded = append(loaded, *loadedLib)
 	}
+	return nil, nil
+}
+
+func (l *LoadedLibrary) GetScenarioFromLib(lib *Library, name string) (*Scenario, *Library) {
+	scenarioPath := SplitName(name)
+	if len(scenarioPath) == 1 { // current library
+		for _, s := range lib.Scenarios {
+			if s.Name == scenarioPath[0] {
+				return &s, lib
+			}
+		}
+		return nil, nil
+	} else {
+		alib := l.GetAliasedLibrary(lib, scenarioPath[0])
+		if alib == nil {
+			return nil, nil
+		}
+		return l.GetScenarioFromLib(alib, strings.Join(scenarioPath[1:], "."))
+	}
+}
+
+func (l *LoadedLibrary) GetAliasedLibrary(lib *Library, alias string) *Library {
+	for _, ref := range lib.Libraries {
+		if ref.Alias == alias {
+			aliasedLib := l.Libraries[ref.Path]
+			return aliasedLib
+		}
+	}
+	return nil
+}
+
+func (l *Loader) Load(paths []string) (*LoadedLibrary, error) {
+	loaded := &LoadedLibrary{
+		TopLibraries: []*Library{},
+		Libraries:    map[string]*Library{},
+	}
+	wd, err := l.File.GetWorkingDirectory()
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while finding working directory", err)
+	}
+	for _, p := range paths {
+		absPath, err := l.File.ResolveRelativeTo(p, wd)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while resolving library path %s from %s", err, p, wd)
+		}
+		err = l.loadLib(absPath, loaded, true)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while loading library from path %s", err, p)
+		}
+	}
+
 	return loaded, nil
 }
 
-func (l *Loader) loadLib(path string) (*LoadedLibrary, error) {
+func (l *Loader) loadLib(path string, loaded *LoadedLibrary, top bool) error {
 	bytes, err := l.File.Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to read library at %s", err, path)
+		return fmt.Errorf("%w\n  while reading library at %s", err, path)
 	}
 	lib := &Library{}
 	err = l.Yaml.Unmarshal(bytes, lib)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to parse library at %s", err, path)
+		return fmt.Errorf("%w\n  while parsing library at %s", err, path)
 	}
 
 	for i, scenario := range lib.Scenarios {
 		for j, snippet := range scenario.Snippets {
-			lib.Scenarios[i].Snippets[j].Path = l.File.ResolveRelativeTo(snippet.Path, path)
+			absSnippetPath, err := l.File.ResolveRelativeTo(snippet.Path, path)
+			if err != nil {
+				return fmt.Errorf("%w\n  while resolving snippet path %s from %s", err, snippet.Path, path)
+			}
+			lib.Scenarios[i].Snippets[j].Path = absSnippetPath
 		}
 	}
 
-	loadedLib := LoadedLibrary{
-		Path:       path,
-		Library:    lib,
-		References: map[string]*LoadedLibrary{},
-	}
-
-	for _, libref := range lib.Libraries {
-		resolvedPath := l.File.ResolveRelativeTo(libref.Path, path)
-		sublib, err := l.loadLib(resolvedPath)
+	for i, libref := range lib.Libraries {
+		absLibPath, err := l.File.ResolveRelativeTo(libref.Path, path)
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("%w\n  while resolving library path %s from %s", err, libref.Path, path)
 		}
-		loadedLib.References[libref.Alias] = sublib
+		lib.Libraries[i].Path = absLibPath
+		err = l.loadLib(absLibPath, loaded, false)
+		if err != nil {
+			return err
+		}
 	}
-	return &loadedLib, nil
+
+	if top {
+		loaded.TopLibraries = append(loaded.TopLibraries, lib)
+	}
+	loaded.Libraries[path] = lib
+
+	return nil
+}
+
+func SplitName(scenarioName string) []string {
+	return strings.Split(scenarioName, ".")
 }

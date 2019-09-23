@@ -12,111 +12,104 @@ import (
 
 func TestListScenarios(t *testing.T) {
 
-	independantLibrary := &library.LoadedLibrary{
-		Path: "./lib/library3.yml",
-		Library: &library.Library{
-			Type: library.OpsFile,
-			Scenarios: []library.Scenario{
-				{
-					Name:        "extra",
-					Description: "an additional scenario",
-					Snippets: []library.Snippet{
-						{
-							Path: "./lib/snippet3.yml",
-						},
+	independantLibrary := &library.Library{
+		Type: library.OpsFile,
+		Scenarios: []library.Scenario{
+			{
+				Name:        "extra",
+				Description: "an additional scenario",
+				Snippets: []library.Snippet{
+					{
+						Path: "/wd/lib/snippet3.yml",
 					},
 				},
 			},
-		},
-		References: map[string]*library.LoadedLibrary{},
-	}
-
-	referencedLibrary := &library.LoadedLibrary{
-		Path: "./lib/library2.yml",
-		Library: &library.Library{
-			Type: library.OpsFile,
-			Scenarios: []library.Scenario{
-				{
-					Name:       "dependency",
-					GlobalArgs: []string{"g2"},
-					Args:       []string{"a2"},
-					Snippets: []library.Snippet{
-						{
-							Path: "./lib/snippet2.yml",
-							Args: []string{"s2"},
-						},
-					},
-				},
-				{
-					Name:        "big_dependency",
-					Description: "a bigger utility",
-					GlobalArgs:  []string{},
-					Args:        []string{},
-					Snippets:    []library.Snippet{},
-					Scenarios: []library.ScenarioRef{
-						{
-							Name: "dependency",
-							Args: []string{},
-						},
-					},
-				},
-			},
-		},
-		References: map[string]*library.LoadedLibrary{},
-	}
-
-	referencingLibrary := &library.LoadedLibrary{
-		Path: "./lib/library.yml",
-		Library: &library.Library{
-			Type: library.OpsFile,
-			Libraries: []library.LibraryRef{
-				{
-					Alias: "library2",
-					Path:  "./library2.yml",
-				},
-			},
-			Scenarios: []library.Scenario{
-				{
-					Name:        "main",
-					Description: "the default",
-					GlobalArgs:  []string{"g1"},
-					Args:        []string{"a1"},
-					Snippets: []library.Snippet{
-						{
-							Path: "./lib/snippet1.yml",
-							Args: []string{"s1"},
-						},
-					},
-					Scenarios: []library.ScenarioRef{
-						{
-							Name: "ref.dependency",
-							Args: []string{"r1"},
-						},
-					},
-				},
-				{
-					Name:        "big",
-					Description: "include everything",
-					GlobalArgs:  []string{},
-					Args:        []string{},
-					Snippets:    []library.Snippet{},
-					Scenarios: []library.ScenarioRef{
-						{
-							Name: "ref.big_dependency",
-							Args: []string{},
-						},
-					},
-				},
-			},
-		},
-		References: map[string]*library.LoadedLibrary{
-			"ref": referencedLibrary,
 		},
 	}
 
-	providedLibraries := []library.LoadedLibrary{
-		*referencingLibrary,
-		*independantLibrary,
+	referencedLibrary := &library.Library{
+		Type: library.OpsFile,
+		Scenarios: []library.Scenario{
+			{
+				Name:       "dependency",
+				GlobalArgs: []string{"g2"},
+				Args:       []string{"a2"},
+				Snippets: []library.Snippet{
+					{
+						Path: "/wd/lib/snippet2.yml",
+						Args: []string{"s2"},
+					},
+				},
+			},
+			{
+				Name:        "big_dependency",
+				Description: "a bigger utility",
+				GlobalArgs:  []string{},
+				Args:        []string{},
+				Snippets:    []library.Snippet{},
+				Scenarios: []library.ScenarioRef{
+					{
+						Name: "dependency",
+						Args: []string{},
+					},
+				},
+			},
+		},
+	}
+
+	referencingLibrary := &library.Library{
+		Type: library.OpsFile,
+		Libraries: []library.LibraryRef{
+			{
+				Alias: "ref",
+				Path:  "/wd/lib/library2.yml",
+			},
+		},
+		Scenarios: []library.Scenario{
+			{
+				Name:        "main",
+				Description: "the default",
+				GlobalArgs:  []string{"g1"},
+				Args:        []string{"a1"},
+				Snippets: []library.Snippet{
+					{
+						Path: "/wd/lib/snippet1.yml",
+						Args: []string{"s1"},
+					},
+				},
+				Scenarios: []library.ScenarioRef{
+					{
+						Name: "ref.dependency",
+						Args: []string{"r1"},
+					},
+				},
+			},
+			{
+				Name:        "big",
+				Description: "include everything",
+				GlobalArgs:  []string{},
+				Args:        []string{},
+				Snippets:    []library.Snippet{},
+				Scenarios: []library.ScenarioRef{
+					{
+						Name: "ref.big_dependency",
+						Args: []string{},
+					},
+				},
+			},
+		},
+	}
+
+	loaded := &library.LoadedLibrary{
+		TopLibraries: []*library.Library{
+			referencingLibrary,
+			independantLibrary,
+		},
+		Libraries: map[string]*library.Library{
+			"/wd/lib/library3.yml": independantLibrary,
+			"/wd/lib/library2.yml": referencedLibrary,
+			"/wd/lib/library.yml":  referencingLibrary,
+		},
 	}
 
 	t.Run("list provided libraries", func(t *testing.T) {
@@ -127,9 +120,9 @@ func TestListScenarios(t *testing.T) {
 			Loader: loader,
 		}
 
-		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
+		loader.EXPECT().Load([]string{"./lib/library.yml", "./lib/library3.yml"}).Times(1).Return(loaded, nil)
 
-		entries, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
+		entries, err := subject.ListScenarios([]string{"./lib/library.yml", "./lib/library3.yml"}, false)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -163,9 +156,9 @@ func TestListScenarios(t *testing.T) {
 			Loader: loader,
 		}
 
-		loader.EXPECT().Load([]string{"lib1", "lib2"}).Times(1).Return(providedLibraries, nil)
+		loader.EXPECT().Load([]string{"./lib/library.yml", "./lib/library3.yml"}).Times(1).Return(loaded, nil)
 
-		entries, err := subject.ListScenarios([]string{"lib1", "lib2"}, true)
+		entries, err := subject.ListScenarios([]string{"./lib/library.yml", "./lib/library3.yml"}, true)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
