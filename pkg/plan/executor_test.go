@@ -18,6 +18,7 @@ func TestStringDiff(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -25,12 +26,13 @@ func TestStringDiff(t *testing.T) {
 			Diff:         mockDiff,
 			Interpolator: mockInterpolator,
 			Output:       writer,
+			File:         mockFile,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
 		mockInterpolator.EXPECT().Interpolate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return([]byte("bytes"), nil)
-
+		mockFile.EXPECT().ResolveRelativeFromWD("snippet").Times(1).Return("../snippet", nil)
 		bytes, err := subject.Execute(true, false, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if err != nil {
@@ -39,7 +41,7 @@ func TestStringDiff(t *testing.T) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
-		expectedStep := "\nSnippet snippet; Arg [snippet args]; Global [global args]\n"
+		expectedStep := "\nSnippet ../snippet; Arg [snippet args]; Global [global args]\n"
 		if writer.String() != expectedStep {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedStep, writer.String())
 		}

@@ -13,6 +13,8 @@ type FileAccess interface {
 	TempDir(dir string, prefix string) (string, error)
 	RemoveAll(dir string) error
 	ResolveRelativeTo(targetFile string, sourceFile string) (string, error)
+	ResolveRelativeFrom(targetFile string, sourceFile string) (string, error)
+	ResolveRelativeFromWD(targetFile string) (string, error)
 	GetWorkingDirectory() (string, error)
 }
 
@@ -64,6 +66,26 @@ func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) (string
 		}
 		return filepath.Clean(filepath.Join(dir, targetFile)), nil
 	}
+}
+
+func (f *FileIO) ResolveRelativeFrom(targetFile string, sourceFile string) (string, error) {
+	dir := sourceFile
+	dirInfo, err := os.Stat(dir)
+	if err != nil {
+		return "", err
+	}
+	if !dirInfo.IsDir() {
+		dir = filepath.Dir(sourceFile)
+	}
+	return filepath.Rel(dir, targetFile)
+}
+
+func (f *FileIO) ResolveRelativeFromWD(targetFile string) (string, error) {
+	dir, err := f.GetWorkingDirectory()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Rel(dir, targetFile)
 }
 
 func (f *FileIO) GetWorkingDirectory() (string, error) {

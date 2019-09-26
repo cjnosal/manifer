@@ -21,6 +21,55 @@ type LoadedLibrary struct {
 	Libraries    map[string]*Library
 }
 
+type ScenarioNode struct {
+	Name         string
+	Description  string
+	LibraryPath  string
+	Type         string
+	GlobalArgs   []string
+	RefArgs      []string
+	Args         []string
+	Snippets     []Snippet
+	Dependencies []*ScenarioNode
+}
+
+func (l *LoadedLibrary) GetScenarioTree(name string) (*ScenarioNode, error) {
+	return l.getScenarioNode(name, []string{}, nil)
+}
+
+func (l *LoadedLibrary) getScenarioNode(name string, refArgs []string, parentLib *Library) (*ScenarioNode, error) {
+	var scenario *Scenario
+	var lib *Library
+	if parentLib != nil {
+		scenario, lib = l.GetScenarioFromLib(parentLib, name)
+	} else {
+		scenario, lib = l.GetScenario(name)
+	}
+	if scenario == nil {
+		return nil, fmt.Errorf("Unable to find scenario %s", name)
+	}
+	deps := []*ScenarioNode{}
+	for _, ref := range scenario.Scenarios {
+		node, err := l.getScenarioNode(ref.Name, ref.Args, lib)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while finding scenario %s", err, name)
+		}
+		deps = append(deps, node)
+	}
+	scenarioNode := &ScenarioNode{
+		Name:         scenario.Name,
+		Description:  scenario.Description,
+		LibraryPath:  l.GetPath(lib),
+		Type:         string(lib.Type),
+		GlobalArgs:   scenario.GlobalArgs,
+		RefArgs:      refArgs,
+		Args:         scenario.Args,
+		Snippets:     scenario.Snippets,
+		Dependencies: deps,
+	}
+	return scenarioNode, nil
+}
+
 func (l *LoadedLibrary) GetScenario(name string) (*Scenario, *Library) {
 	for _, lib := range l.TopLibraries {
 		scenario, foundIn := l.GetScenarioFromLib(lib, name)
@@ -57,6 +106,15 @@ func (l *LoadedLibrary) GetAliasedLibrary(lib *Library, alias string) *Library {
 		}
 	}
 	return nil
+}
+
+func (l *LoadedLibrary) GetPath(lib *Library) string {
+	for path, loaded := range l.Libraries {
+		if lib == loaded {
+			return path
+		}
+	}
+	return ""
 }
 
 func (l *Loader) Load(paths []string) (*LoadedLibrary, error) {

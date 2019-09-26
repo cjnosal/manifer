@@ -42,6 +42,28 @@ combine the library and template to compose the final document.
   -library value
         Path to library file
 ```
+## inspect
+```
+./manifer inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...):
+  inspect scenarios as a dependency tree or execution plan.
+  -j    Print output in json format
+  -json
+        Print output in json format
+  -l value
+        Path to library file
+  -library value
+        Path to library file
+  -p    Print execution plan
+  -plan
+        Print execution plan
+  -s value
+        Scenario name in library
+  -scenario value
+        Scenario name in library
+  -t    Print dependency tree (default)
+  -tree
+        Print dependency tree (default)
+```
 ## compose
 ```
 ./manifer compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...]:

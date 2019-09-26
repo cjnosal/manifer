@@ -19,6 +19,8 @@ func NewManifer(logger io.Writer) Manifer {
 	return &libImpl{
 		composer: newComposer(logger),
 		lister:   newLister(),
+		loader:   newLoader(),
+		file:     &file.FileIO{},
 	}
 }
 
@@ -32,11 +34,15 @@ type Manifer interface {
 		showDiff bool) ([]byte, error)
 
 	ListScenarios(libraryPaths []string, all bool) ([]scenario.ScenarioEntry, error)
+
+	GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error)
 }
 
 type libImpl struct {
 	composer composer.Composer
 	lister   scenario.ScenarioLister
+	loader   *library.Loader
+	file     *file.FileIO
 }
 
 func (l *libImpl) Compose(
@@ -51,6 +57,55 @@ func (l *libImpl) Compose(
 
 func (l *libImpl) ListScenarios(libraryPaths []string, all bool) ([]scenario.ScenarioEntry, error) {
 	return l.lister.ListScenarios(libraryPaths, all)
+}
+
+func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error) {
+	loaded, err := l.loader.Load(libraryPaths)
+	if err != nil {
+		return nil, err
+	}
+	node, err := loaded.GetScenarioTree(name)
+	if err != nil {
+		return nil, err
+	}
+	err = l.makePathsRelative(node)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {
+	for i, snippet := range node.Snippets {
+		rel, err := l.file.ResolveRelativeFromWD(snippet.Path)
+		if err != nil {
+			return err
+		}
+		node.Snippets[i].Path = rel
+	}
+	for _, dep := range node.Dependencies {
+		err := l.makePathsRelative(dep)
+		if err != nil {
+			return err
+		}
+	}
+	rel, err := l.file.ResolveRelativeFromWD(node.LibraryPath)
+	if err != nil {
+		return err
+	}
+	node.LibraryPath = rel
+	return nil
+}
+
+func newLoader() *library.Loader {
+	file := &file.FileIO{}
+	yaml := &yaml.Yaml{}
+
+	loader := &library.Loader{
+		File: file,
+		Yaml: yaml,
+	}
+	return loader
 }
 
 func newLister() scenario.ScenarioLister {
@@ -89,6 +144,7 @@ func newComposer(logger io.Writer) composer.Composer {
 		Interpolator: opsFileInterpolator,
 		Diff:         diff,
 		Output:       logger,
+		File:         file,
 	}
 	return &composer.ComposerImpl{
 		Resolver: resolver,
