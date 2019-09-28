@@ -2,9 +2,15 @@
 
 pushd `dirname $0`/.. > /dev/null
 
-go fmt ./...
-
-go build -o ./manifer -i ./cmd/manifer
+if [[ "$1" == "all" ]]
+then
+  go fmt ./... && \
+    GOOS=linux go build -o ./manifer_linux -i ./cmd/manifer && \
+    GOOS=darwin go build -o ./manifer_darwin -i ./cmd/manifer
+else
+  go fmt ./... && \
+    go build -o ./manifer -i ./cmd/manifer
+fi
 result=$?
 
 popd > /dev/null

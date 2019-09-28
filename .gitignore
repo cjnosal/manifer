@@ -5,6 +5,8 @@
 *.so
 *.dylib
 /manifer
+/manifer_linux
+/manifer_darwin
 
 # Generated mocks
 mock_*

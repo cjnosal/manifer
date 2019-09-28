@@ -190,10 +190,11 @@ If multiple independant libraries are provided to the CLI all scenario names
 should be unambiguous.
 
 # build
-`./scripts/build.sh`
+`./scripts/build.sh [all]`
+- `all` will build `manifer_darwin` and `manifer_linux`
 
 # test
-`./scripts/test.sh [go test flags]`
+`./scripts/test.sh [unit|integration|go test flags]`
 - `-count=1` can be used to disable test caching of integration tests in `cmd/manifer`
 
 # import
