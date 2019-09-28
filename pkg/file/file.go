@@ -69,6 +69,9 @@ func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) (string
 }
 
 func (f *FileIO) ResolveRelativeFrom(targetFile string, sourceFile string) (string, error) {
+	if !filepath.IsAbs(targetFile) {
+		return targetFile, nil
+	}
 	dir := sourceFile
 	dirInfo, err := os.Stat(dir)
 	if err != nil {
@@ -81,6 +84,9 @@ func (f *FileIO) ResolveRelativeFrom(targetFile string, sourceFile string) (stri
 }
 
 func (f *FileIO) ResolveRelativeFromWD(targetFile string) (string, error) {
+	if !filepath.IsAbs(targetFile) {
+		return targetFile, nil
+	}
 	dir, err := f.GetWorkingDirectory()
 	if err != nil {
 		return "", err
