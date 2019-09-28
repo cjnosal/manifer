@@ -1,7 +1,8 @@
 #!/bin/bash
 pushd `dirname $0`/.. > /dev/null
 
-go list github.com/golang/mock/mockgen >/dev/null || go install github.com/golang/mock/mockgen
+go list github.com/golang/mock/mockgen >/dev/null || \
+  (go get github.com/golang/mock/mockgen@v1.2.0 && go install github.com/golang/mock/mockgen)
 
 function mock {
 	set -e

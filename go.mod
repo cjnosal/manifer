@@ -15,7 +15,7 @@ require (
 	github.com/cppforlife/go-patch v0.2.0
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/golang/mock v1.3.1
+	github.com/golang/mock v1.2.0 // pin v1.2.0 for https://github.com/golang/mock/issues/325
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/subcommands v1.0.1
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
