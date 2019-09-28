@@ -191,6 +191,9 @@ func TestInspect(t *testing.T) {
 			"--tree",
 			"-s",
 			"meta",
+			"--",
+			"-o=../../test/data/ops_file_with_vars.yml",
+			"-v=value=lastbit",
 		)
 		writer := &test.StringWriter{}
 		cmd.Stdout = writer
@@ -243,6 +246,16 @@ dependencies:
     dependencies:
 
 
+name:        passthrough (from <cli>)
+description: args passed after --
+global:  [-v=value=lastbit] (applied to all scenarios)
+refargs: [] (applied to snippets and subscenarios)
+args:    [] (applied to snippets and subscenarios)
+snippets:
+  ../../test/data/ops_file_with_vars.yml
+  args: []
+
+dependencies:
 `
 		diffBytes(writer.String(), expected)
 		if writer.String() != expected {
@@ -261,6 +274,9 @@ dependencies:
 			"--plan",
 			"-s",
 			"meta",
+			"--",
+			"-o=../../test/data/ops_file_with_vars.yml",
+			"-v=value=lastbit",
 		)
 		writer := &test.StringWriter{}
 		cmd.Stdout = writer
@@ -270,7 +286,7 @@ dependencies:
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		expected := `global: []
+		expected := `global: [-v=value=lastbit]
 - ../../test/data/placeholder_opsfile.yml
   args:
     snippet: [-v path1=/base1? -v value1=a -v path2=/base2? -v value2=b -v path3=/base3? -v value3=c]
@@ -292,6 +308,10 @@ dependencies:
     snippet: [-v path2=/reused? -v value2=by_second]
     placeholder: [-v path1=/fixed? -v value1=from_scenario]
     meta: []
+- ../../test/data/ops_file_with_vars.yml
+  args:
+    snippet: []
+    passthrough: []
 `
 
 		if writer.String() != expected {

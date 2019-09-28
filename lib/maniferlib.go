@@ -7,6 +7,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/composer"
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/interpolator/opsfile"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
@@ -21,6 +22,7 @@ func NewManifer(logger io.Writer) Manifer {
 		lister:   newLister(),
 		loader:   newLoader(),
 		file:     &file.FileIO{},
+		opInt:    opsfile.NewOpsFileInterpolator(&yaml.Yaml{}),
 	}
 }
 
@@ -36,6 +38,8 @@ type Manifer interface {
 	ListScenarios(libraryPaths []string, all bool) ([]scenario.ScenarioEntry, error)
 
 	GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error)
+
+	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 }
 
 type libImpl struct {
@@ -43,6 +47,7 @@ type libImpl struct {
 	lister   scenario.ScenarioLister
 	loader   *library.Loader
 	file     *file.FileIO
+	opInt    interpolator.Interpolator
 }
 
 func (l *libImpl) Compose(
@@ -73,6 +78,10 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 		return nil, err
 	}
 	return node, nil
+}
+
+func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
+	return l.opInt.ParsePassthroughFlags(passthroughArgs)
 }
 
 func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {
@@ -129,7 +138,6 @@ func newComposer(logger io.Writer) composer.Composer {
 		File:  file,
 		Patch: patch,
 	}
-	selector := &scenario.Selector{}
 	loader := &library.Loader{
 		File: file,
 		Yaml: yaml,
@@ -137,7 +145,6 @@ func newComposer(logger io.Writer) composer.Composer {
 	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml)
 	resolver := &composer.Resolver{
 		Loader:          loader,
-		Selector:        selector,
 		SnippetResolver: opsFileInterpolator,
 	}
 	opsFileExecutor := &plan.InterpolationExecutor{

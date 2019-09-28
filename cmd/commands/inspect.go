@@ -41,7 +41,7 @@ func (*inspectCmd) Synopsis() string {
 	return "inspect scenarios as a dependency tree or execution plan."
 }
 func (*inspectCmd) Usage() string {
-	return `inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...):
+	return `inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...) [-- passthrough flags ...]:
   inspect scenarios as a dependency tree or execution plan.
 `
 }
@@ -82,6 +82,14 @@ func (p *inspectCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		}
 		nodes = append(nodes, node)
 	}
+	passthroughNode, err := p.manifer.GetScenarioNode(f.Args())
+	if err != nil {
+		p.logger.Printf("%v\n  while trying to parse passthrough args", err)
+		return subcommands.ExitFailure
+	}
+	if passthroughNode != nil {
+		nodes = append(nodes, passthroughNode)
+	}
 
 	var outBytes []byte
 	if p.printPlan {
@@ -106,7 +114,7 @@ func (p *inspectCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		}
 	}
 
-	_, err := p.writer.Write(outBytes)
+	_, err = p.writer.Write(outBytes)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing inspect output", err)
 		return subcommands.ExitFailure

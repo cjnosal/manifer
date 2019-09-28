@@ -41,25 +41,25 @@ func (c *ComposerImpl) Compose(
 	}
 	var out []byte
 
-	if len(plan.Snippets) > 0 || len(plan.GlobalArgs) > 0 {
+	if len(plan.Steps) > 0 || len(plan.Global.Args) > 0 {
 
-		for _, snippet := range plan.Snippets {
-			taggedSnippet, err := c.File.ReadAndTag(snippet.Path)
+		for _, step := range plan.Steps {
+			taggedSnippet, err := c.File.ReadAndTag(step.Snippet)
 			if err != nil {
-				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, snippet.Path)
+				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, step.Snippet)
 			}
-			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, snippet.Args, plan.GlobalArgs)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, step.FlattenArgs(), plan.Global.Args)
 			if err != nil {
-				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, snippet.Path)
+				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, step.Snippet)
 			}
 
 			in = &file.TaggedBytes{Tag: in.Tag, Bytes: out}
 		}
 
-		if len(plan.GlobalArgs) > 0 {
-			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, nil, plan.GlobalArgs)
+		if len(plan.Global.Args) > 0 {
+			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, nil, plan.Global.Args)
 			if err != nil {
-				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.GlobalArgs)
+				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.Global.Args)
 			}
 		}
 	} else {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/scenario"
+	"github.com/cjnosal/manifer/pkg/plan"
 )
 
 func TestResolve(t *testing.T) {
@@ -21,10 +21,9 @@ func TestResolve(t *testing.T) {
 		passthrough       []string
 		yamlError         error
 		expectedLibraries *library.LoadedLibrary
-		resolveError      error
-		expectedSnippets  []string
+		expectedNode      *library.ScenarioNode
 		parseError        error
-		expectedPlan      *scenario.Plan
+		expectedPlan      *plan.Plan
 		expectedError     error
 	}{
 		{
@@ -35,18 +34,44 @@ func TestResolve(t *testing.T) {
 			scenarioNames: []string{
 				"a scenario",
 			},
-			passthrough: []string{
-				"extra",
-			},
-			expectedSnippets:  []string{},
-			expectedLibraries: &library.LoadedLibrary{},
-			expectedPlan: &scenario.Plan{
-				GlobalArgs: []string{
-					"extra",
-				},
-				Snippets: []library.Snippet{
+			passthrough:  []string{},
+			expectedNode: nil,
+			expectedLibraries: &library.LoadedLibrary{
+				TopLibraries: []*library.Library{
 					{
-						Path: "./lib/snippet.yml",
+						Scenarios: []library.Scenario{
+							{
+								Name: "a scenario",
+								Args: []string{},
+								Snippets: []library.Snippet{
+									{
+										Path: "/foo.yml",
+										Args: []string{"arg"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedPlan: &plan.Plan{
+				Global: plan.ArgSet{
+					Tag:  "global",
+					Args: []string{},
+				},
+				Steps: []*plan.Step{
+					{
+						Snippet: "/foo.yml",
+						Args: []plan.ArgSet{
+							{
+								Tag:  "snippet",
+								Args: []string{"arg"},
+							},
+							{
+								Tag:  "a scenario",
+								Args: []string{},
+							},
+						},
 					},
 				},
 			},
@@ -62,18 +87,70 @@ func TestResolve(t *testing.T) {
 			passthrough: []string{
 				"extra",
 			},
-			expectedSnippets:  []string{"foo"},
-			expectedLibraries: &library.LoadedLibrary{},
-			expectedPlan: &scenario.Plan{
-				GlobalArgs: []string{
-					"extra",
-				},
+			expectedNode: &library.ScenarioNode{
+				GlobalArgs: []string{"extra"},
 				Snippets: []library.Snippet{
 					{
-						Path: "./lib/snippet.yml",
+						Path: "/bar.yml",
+						Args: []string{"arg2"},
+					},
+				},
+				Name:        "passthrough",
+				Description: "args passed after --",
+				LibraryPath: "<cli>",
+				Type:        string(library.OpsFile),
+				Args:        []string{},
+				RefArgs:     []string{},
+			},
+			expectedLibraries: &library.LoadedLibrary{
+				TopLibraries: []*library.Library{
+					{
+						Scenarios: []library.Scenario{
+							{
+								Name: "a scenario",
+								Args: []string{},
+								Snippets: []library.Snippet{
+									{
+										Path: "/foo.yml",
+										Args: []string{"arg"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedPlan: &plan.Plan{
+				Global: plan.ArgSet{
+					Tag:  "global",
+					Args: []string{"extra"},
+				},
+				Steps: []*plan.Step{
+					{
+						Snippet: "/foo.yml",
+						Args: []plan.ArgSet{
+							{
+								Tag:  "snippet",
+								Args: []string{"arg"},
+							},
+							{
+								Tag:  "a scenario",
+								Args: []string{},
+							},
+						},
 					},
 					{
-						Path: "foo",
+						Snippet: "/bar.yml",
+						Args: []plan.ArgSet{
+							{
+								Tag:  "snippet",
+								Args: []string{"arg2"},
+							},
+							{
+								Tag:  "passthrough",
+								Args: []string{},
+							},
+						},
 					},
 				},
 			},
@@ -83,15 +160,13 @@ func TestResolve(t *testing.T) {
 			libraryPaths: []string{
 				"/tmp/library/lib.yml",
 			},
-			scenarioNames: []string{
-				"a scenario",
-			},
+			scenarioNames: []string{},
 			passthrough: []string{
 				"extra",
 			},
 			parseError:        errors.New("test"),
 			expectedLibraries: &library.LoadedLibrary{},
-			expectedError:     errors.New("test\n  while trying to resolve extra snippets"),
+			expectedError:     errors.New("test\n  while trying to parse passthrough args"),
 		},
 		{
 			name: "yaml error",
@@ -104,18 +179,6 @@ func TestResolve(t *testing.T) {
 			yamlError:     errors.New("test"),
 			expectedError: errors.New("test\n  while trying to load libraries"),
 		},
-		{
-			name: "resolve error",
-			libraryPaths: []string{
-				"/tmp/library/lib.yml",
-			},
-			scenarioNames: []string{
-				"a scenario",
-			},
-			expectedLibraries: &library.LoadedLibrary{},
-			resolveError:      errors.New("test"),
-			expectedError:     errors.New("test\n  while trying to select scenarios"),
-		},
 	}
 
 	for _, c := range cases {
@@ -125,20 +188,15 @@ func TestResolve(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockLoader := library.NewMockLibraryLoader(ctrl)
-			mockSelector := scenario.NewMockScenarioSelector(ctrl)
 			mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 
 			mockLoader.EXPECT().Load(c.libraryPaths).Times(1).Return(c.expectedLibraries, c.yamlError)
 			if c.yamlError == nil {
-				mockSelector.EXPECT().SelectScenarios(c.scenarioNames, c.expectedLibraries).Times(1).Return(c.expectedPlan, c.resolveError)
-				if c.resolveError == nil {
-					mockInterpolator.EXPECT().ParseSnippetFlags(c.passthrough).Times(1).Return(c.expectedSnippets, c.parseError)
-				}
+				mockInterpolator.EXPECT().ParsePassthroughFlags(c.passthrough).Times(1).Return(c.expectedNode, c.parseError)
 			}
 
 			subject := Resolver{
 				Loader:          mockLoader,
-				Selector:        mockSelector,
 				SnippetResolver: mockInterpolator,
 			}
 

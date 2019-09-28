@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/yaml"
 )
 
@@ -24,42 +25,76 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 	}
 }
 
-func TestParseSnippetFlags(t *testing.T) {
+func TestParsePassthroughFlags(t *testing.T) {
 
 	t.Run("op files", func(t *testing.T) {
 		subject := interpolatorWrapper{}
 		flags := []string{"-ofoo", "-o", "bar", "--ops-file=bizz"}
-		paths, err := subject.ParseSnippetFlags(flags)
+		node, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
-		expectedPaths := []string{"foo", "bar", "bizz"}
-		if !reflect.DeepEqual(expectedPaths, paths) {
-			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedPaths, paths)
+		expectedNode := &library.ScenarioNode{
+			GlobalArgs:  []string{},
+			RefArgs:     []string{},
+			Name:        "passthrough",
+			Description: "args passed after --",
+			LibraryPath: "<cli>",
+			Type:        string(library.OpsFile),
+			Snippets: []library.Snippet{
+				{
+					Path: "foo",
+					Args: []string{},
+				},
+				{
+					Path: "bar",
+					Args: []string{},
+				},
+				{
+					Path: "bizz",
+					Args: []string{},
+				},
+			},
+		}
+		if !reflect.DeepEqual(*expectedNode, *node) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
 	})
 
-	t.Run("ignore other flags", func(t *testing.T) {
+	t.Run("set other flags as globals", func(t *testing.T) {
 		subject := interpolatorWrapper{}
 		flags := []string{"-ofoo", "-vbar"}
-		paths, err := subject.ParseSnippetFlags(flags)
+		node, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
-		expectedPaths := []string{"foo"}
-		if !reflect.DeepEqual(expectedPaths, paths) {
-			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedPaths, paths)
+		expectedNode := &library.ScenarioNode{
+			GlobalArgs:  []string{"-vbar"},
+			RefArgs:     []string{},
+			Name:        "passthrough",
+			Description: "args passed after --",
+			LibraryPath: "<cli>",
+			Type:        string(library.OpsFile),
+			Snippets: []library.Snippet{
+				{
+					Path: "foo",
+					Args: []string{},
+				},
+			},
+		}
+		if !reflect.DeepEqual(*expectedNode, *node) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
 	})
 
 	t.Run("parse error", func(t *testing.T) {
 		subject := interpolatorWrapper{}
 		flags := []string{"-o"}
-		_, err := subject.ParseSnippetFlags(flags)
+		_, err := subject.ParsePassthroughFlags(flags)
 
 		expectedError := "expected argument for flag `-o, --ops-file'\n  while trying to parse opsfile args"
 		if err == nil || err.Error() != expectedError {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/interpolator"
+	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	boshopts "github.com/cloudfoundry/bosh-cli/cmd/opts"
 	boshtpl "github.com/cloudfoundry/bosh-cli/director/template"
@@ -38,15 +39,32 @@ type opFlags struct {
 	Oppaths []string `long:"ops-file" short:"o" value-name:"PATH" description:"Load manifest operations from a YAML file"`
 }
 
-func (i *interpolatorWrapper) ParseSnippetFlags(args []string) ([]string, error) {
-	opFlags := opFlags{}
+func (i *interpolatorWrapper) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
+	var node *library.ScenarioNode
 	if len(args) > 0 {
-		_, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
+		opFlags := opFlags{}
+		remainder, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to parse opsfile args", err)
 		}
+		snippets := []library.Snippet{}
+		for _, o := range opFlags.Oppaths {
+			snippets = append(snippets, library.Snippet{
+				Path: o,
+				Args: []string{},
+			})
+		}
+		node = &library.ScenarioNode{
+			Name:        "passthrough",
+			Description: "args passed after --",
+			LibraryPath: "<cli>",
+			Type:        string(library.OpsFile),
+			GlobalArgs:  remainder,
+			RefArgs:     []string{},
+			Snippets:    snippets,
+		}
 	}
-	return opFlags.Oppaths, nil
+	return node, nil
 }
 
 func (i *interpolatorWrapper) Interpolate(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {

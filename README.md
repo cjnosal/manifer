@@ -44,7 +44,7 @@ combine the library and template to compose the final document.
 ```
 ## inspect
 ```
-./manifer inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...):
+./manifer inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...) [-- passthrough flags ...]:
   inspect scenarios as a dependency tree or execution plan.
   -j    Print output in json format
   -json

@@ -5,40 +5,49 @@ import (
 
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/scenario"
+	"github.com/cjnosal/manifer/pkg/plan"
 )
 
 type ScenarioResolver interface {
-	Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*scenario.Plan, error)
+	Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*plan.Plan, error)
 }
 
 type Resolver struct {
 	Loader          library.LibraryLoader
-	Selector        scenario.ScenarioSelector
 	SnippetResolver interpolator.Interpolator
 }
 
-func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*scenario.Plan, error) {
+func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*plan.Plan, error) {
 	libraries, err := r.Loader.Load(libPaths)
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  while trying to load libraries", err)
 	}
 
-	plan, err := r.Selector.SelectScenarios(scenarioNames, libraries)
+	nodes := []*library.ScenarioNode{}
+	for _, scenarioName := range scenarioNames {
+		node, err := libraries.GetScenarioTree(scenarioName)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to get scenario tree for %s", err, scenarioName)
+		}
+		nodes = append(nodes, node)
+	}
+	passthroughNode, err := r.SnippetResolver.ParsePassthroughFlags(passthrough)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to select scenarios", err)
+		return nil, fmt.Errorf("%w\n  while trying to parse passthrough args", err)
+	}
+	if passthroughNode != nil {
+		nodes = append(nodes, passthroughNode)
+	}
+	executionPlan := &plan.Plan{
+		Global: plan.ArgSet{
+			Tag:  "global",
+			Args: []string{},
+		},
+		Steps: []*plan.Step{},
+	}
+	for _, node := range nodes {
+		executionPlan = plan.Append(executionPlan, plan.FromScenarioTree(node))
 	}
 
-	snippetPaths, err := r.SnippetResolver.ParseSnippetFlags(passthrough)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to resolve extra snippets", err)
-	}
-	for _, path := range snippetPaths {
-		snippet := library.Snippet{Path: path}
-		plan.Snippets = append(plan.Snippets, snippet)
-	}
-
-	plan.GlobalArgs = append(plan.GlobalArgs, passthrough...)
-
-	return plan, nil
+	return executionPlan, nil
 }

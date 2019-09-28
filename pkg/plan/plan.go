@@ -24,6 +24,14 @@ type Step struct {
 	Args    []ArgSet
 }
 
+func (s *Step) FlattenArgs() []string {
+	args := []string{}
+	for _, set := range s.Args {
+		args = append(args, set.Args...)
+	}
+	return args
+}
+
 type ArgSet struct {
 	Tag  string
 	Args []string
