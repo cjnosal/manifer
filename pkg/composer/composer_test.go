@@ -2,13 +2,14 @@ package composer
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/test"
 )
 
 type interpolation struct {
@@ -85,8 +86,9 @@ func TestCompose(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		} else {
-			if !reflect.DeepEqual(expectedOut, out) {
-				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
+			if !cmp.Equal(expectedOut, out) {
+				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
+					expectedOut, out, cmp.Diff(expectedOut, out))
 			}
 		}
 	})
@@ -123,8 +125,9 @@ func TestCompose(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		} else {
-			if !reflect.DeepEqual(expectedOut, out) {
-				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
+			if !cmp.Equal(expectedOut, out) {
+				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
+					expectedOut, out, cmp.Diff(expectedOut, out))
 			}
 		}
 	})
@@ -166,8 +169,9 @@ func TestCompose(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		} else {
-			if !reflect.DeepEqual(expectedOut, out) {
-				t.Errorf("Expected output:\n'''%s'''\nActual:\n'''%s'''\n", expectedOut, out)
+			if !cmp.Equal(expectedOut, out) {
+				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
+					expectedOut, out, cmp.Diff(expectedOut, out))
 			}
 		}
 	})
@@ -201,7 +205,8 @@ func TestCompose(t *testing.T) {
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(nil, resolverError)
 		_, err := subject.Compose(template, libraries, scenarioNames, passthrough, false, false)
 
-		if err == nil || err.Error() != expectedError.Error() {
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
+			t.Errorf("'%s'", cmp.Diff(err.Error(), expectedError.Error()))
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
 		}
 	})

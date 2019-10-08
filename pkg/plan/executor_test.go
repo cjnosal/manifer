@@ -2,7 +2,6 @@ package plan
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/cjnosal/manifer/pkg/diff"
@@ -10,6 +9,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestStringDiff(t *testing.T) {
@@ -37,7 +37,7 @@ func TestStringDiff(t *testing.T) {
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
-		} else if !reflect.DeepEqual(bytes, []byte("bytes")) {
+		} else if !cmp.Equal(bytes, []byte("bytes")) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
@@ -68,7 +68,7 @@ func TestStringDiff(t *testing.T) {
 
 		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
 
-		if !reflect.DeepEqual(expectedError, err) {
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 
@@ -97,7 +97,7 @@ func TestStringDiff(t *testing.T) {
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
-		} else if !reflect.DeepEqual(bytes, []byte("bytes")) {
+		} else if !cmp.Equal(bytes, []byte("bytes")) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 

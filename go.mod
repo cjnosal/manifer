@@ -17,6 +17,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/golang/mock v1.2.0 // pin v1.2.0 for https://github.com/golang/mock/issues/325
 	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/google/go-cmp v0.3.1
 	github.com/google/subcommands v1.0.1
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
 	github.com/jessevdk/go-flags v1.4.0

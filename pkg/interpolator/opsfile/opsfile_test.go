@@ -2,7 +2,6 @@ package opsfile
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/cppforlife/go-patch/patch"
@@ -11,6 +10,8 @@ import (
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/test"
+	"github.com/google/go-cmp/cmp"
 )
 
 func litpnt(i interface{}) *interface{} {
@@ -58,7 +59,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 				},
 			},
 		}
-		if !reflect.DeepEqual(*expectedNode, *node) {
+		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
 	})
@@ -86,7 +87,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 				},
 			},
 		}
-		if !reflect.DeepEqual(*expectedNode, *node) {
+		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
 	})
@@ -179,11 +180,11 @@ func TestWrapper(t *testing.T) {
 			}
 
 			templateBytes, err := subject.Interpolate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
-			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
+			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 
-			if err == nil && !reflect.DeepEqual(templateBytes, expectedTemplate) {
+			if err == nil && !cmp.Equal(templateBytes, expectedTemplate) {
 				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedTemplate, templateBytes)
 			}
 		})
@@ -310,11 +311,11 @@ func TestInterpolate(t *testing.T) {
 
 			templateBytes, err := subject.interpolate(c.in, c.snippet, c.args)
 
-			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
+			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 
-			if err == nil && !reflect.DeepEqual(templateBytes, c.expectedOut) {
+			if err == nil && !cmp.Equal(templateBytes, c.expectedOut) {
 				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedOut, templateBytes)
 			}
 		})

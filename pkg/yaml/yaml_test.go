@@ -1,7 +1,7 @@
 package yaml
 
 import (
-	"reflect"
+	"github.com/google/go-cmp/cmp"
 	"testing"
 )
 
@@ -47,7 +47,7 @@ func TestUnmarshal(t *testing.T) {
 			"name": "test",
 		}
 
-		if !reflect.DeepEqual(actual, expected) {
+		if !cmp.Equal(actual, expected) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, actual)
 		}
 	})

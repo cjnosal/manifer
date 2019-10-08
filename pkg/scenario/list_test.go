@@ -2,12 +2,12 @@ package scenario
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestListScenarios(t *testing.T) {
@@ -143,7 +143,7 @@ func TestListScenarios(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(expected, entries) {
+		if !cmp.Equal(expected, entries) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, entries)
 		}
 	})
@@ -187,7 +187,7 @@ func TestListScenarios(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(expected, entries) {
+		if !cmp.Equal(expected, entries) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expected, entries)
 		}
 	})

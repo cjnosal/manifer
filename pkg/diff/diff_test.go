@@ -2,11 +2,12 @@ package diff
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -109,7 +110,7 @@ func TestFindDiff(t *testing.T) {
 
 		_, err := subject.FindDiff("file1", "file2")
 
-		if !reflect.DeepEqual(expectedError, err) {
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 
@@ -132,7 +133,7 @@ func TestFindDiff(t *testing.T) {
 
 		_, err := subject.FindDiff("file1", "file2")
 
-		if !reflect.DeepEqual(expectedError, err) {
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 

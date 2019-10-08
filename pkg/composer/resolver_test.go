@@ -2,10 +2,11 @@ package composer
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
+	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
@@ -202,13 +203,14 @@ func TestResolve(t *testing.T) {
 
 			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames, c.passthrough)
 
-			if !(c.expectedError == nil && err == nil) && !(c.expectedError != nil && err != nil && c.expectedError.Error() == err.Error()) {
+			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
 
 			if err == nil {
-				if !reflect.DeepEqual(c.expectedPlan, plan) {
-					t.Errorf("Expected plan:\n'''%v'''\nActual:\n'''%v'''\n", c.expectedPlan, plan)
+				if !cmp.Equal(c.expectedPlan, plan) {
+					t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%s'''\n",
+						c.expectedPlan, plan, cmp.Diff(c.expectedPlan, plan))
 				}
 			}
 		})

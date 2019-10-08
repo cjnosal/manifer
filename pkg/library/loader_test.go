@@ -2,13 +2,14 @@ package library
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/test"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestLoad(t *testing.T) {
@@ -72,7 +73,7 @@ func TestLoad(t *testing.T) {
 			t.Errorf("Unexpected error: %v\n", err)
 		}
 
-		if !reflect.DeepEqual(expectedLoadedLibs, *loadedLibs) {
+		if !cmp.Equal(expectedLoadedLibs, *loadedLibs) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedLoadedLibs, *loadedLibs)
 		}
 	})
@@ -173,7 +174,7 @@ func TestLoad(t *testing.T) {
 			t.Errorf("Unexpected error: %v\n", err)
 		}
 
-		if !reflect.DeepEqual(expectedLoadedLibs, *loadedLibs) {
+		if !cmp.Equal(expectedLoadedLibs, *loadedLibs) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedLoadedLibs, *loadedLibs)
 		}
 	})
@@ -285,7 +286,7 @@ func TestLoad(t *testing.T) {
 			t.Errorf("Unexpected error: %v\n", err)
 		}
 
-		if !reflect.DeepEqual(expectedLoadedLibs, *loadedLibs) {
+		if !cmp.Equal(expectedLoadedLibs, *loadedLibs) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedLoadedLibs, *loadedLibs)
 		}
 	})
@@ -334,10 +335,10 @@ func TestLoad(t *testing.T) {
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
 
-		expectedError := `test
+		expectedError := errors.New(`test
   while resolving library path ../lib2/library2.yml from /wd/lib/library.yml
-  while loading library from path ./lib/library.yml`
-		if err == nil || err.Error() != expectedError {
+  while loading library from path ./lib/library.yml`)
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
@@ -378,10 +379,10 @@ func TestLoad(t *testing.T) {
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
 
-		expectedError := `test
+		expectedError := errors.New(`test
   while resolving snippet path ./snippet.yml from /wd/lib/library.yml
-  while loading library from path ./lib/library.yml`
-		if err == nil || err.Error() != expectedError {
+  while loading library from path ./lib/library.yml`)
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
@@ -405,10 +406,10 @@ func TestLoad(t *testing.T) {
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
 
-		expectedError := `test
+		expectedError := errors.New(`test
   while parsing library at /wd/lib/library.yml
-  while loading library from path ./lib/library.yml`
-		if err == nil || err.Error() != expectedError {
+  while loading library from path ./lib/library.yml`)
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
@@ -431,10 +432,10 @@ func TestLoad(t *testing.T) {
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
 
-		expectedError := `test
+		expectedError := errors.New(`test
   while reading library at /wd/lib/library.yml
-  while loading library from path ./lib/library.yml`
-		if err == nil || err.Error() != expectedError {
+  while loading library from path ./lib/library.yml`)
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
@@ -456,9 +457,9 @@ func TestLoad(t *testing.T) {
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
 
-		expectedError := `test
-  while resolving library path ./lib/library.yml from /wd`
-		if err == nil || err.Error() != expectedError {
+		expectedError := errors.New(`test
+  while resolving library path ./lib/library.yml from /wd`)
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
@@ -478,8 +479,8 @@ func TestLoad(t *testing.T) {
 		mockFile.EXPECT().GetWorkingDirectory().Times(1).Return("", errors.New("test"))
 
 		_, err := subject.Load([]string{"./lib/library.yml"})
-		expectedError := "test\n  while finding working directory"
-		if err == nil || err.Error() != expectedError {
+		expectedError := errors.New("test\n  while finding working directory")
+		if !cmp.Equal(&err, &expectedError, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
 	})
