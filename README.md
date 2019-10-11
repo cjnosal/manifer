@@ -66,8 +66,8 @@ combine the library and template to compose the final document.
 ```
 ## compose
 ```
-./manifer compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...]:
-  compose a yml file from snippets.
+./manifer compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...] [\;] :
+  compose a yml file from snippets. Use '\;' as a separator when reusing a scenario with different variables.
   -d    Show diff after each snippet is applied
   -diff
         Show diff after each snippet is applied
@@ -86,6 +86,24 @@ combine the library and template to compose the final document.
         Path to initial template file
   -template string
         Path to initial template file
+```
+### appending additional compositions
+Additional compositions can be appended using `\;` as a separator. For each additional composition:
+- the output of the last composition is used as the template
+- the list of libraries will be preserved
+- new libraries can be referenced
+- new scenarios and passthrough arguments can be specified
+- global variables cleared
+
+This allows the value of a variable to be changed, without having to re-enter file paths for the libraries or template.
+The following invocations are equivalent:
+```
+./manifer compose -t my-template -l my-library -s my-scenario -- -v arg=foo > temp
+./manifer compose -t temp -l my-library -s my-scenario -- -v arg=bar > final
+```
+```
+./manifer compose -t my-template -l my-library -s my-scenario -- -v arg=foo \; \
+  -s my-scenario -- -v arg=bar > final
 ```
 
 # schemas

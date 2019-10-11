@@ -1,7 +1,7 @@
 package lib
 
 import (
-	"github.com/sergi/go-diff/diffmatchpatch"
+	"fmt"
 	"io"
 
 	"github.com/cjnosal/manifer/pkg/composer"
@@ -13,6 +13,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/pkg/scenario"
 	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // logger used for Composer's showDiff/showPlan
@@ -29,6 +30,14 @@ func NewManifer(logger io.Writer) Manifer {
 type Manifer interface {
 	Compose(
 		templatePath string,
+		libraryPaths []string,
+		scenarioNames []string,
+		passthrough []string,
+		showPlan bool,
+		showDiff bool) ([]byte, error)
+
+	ComposeFromBytes(
+		template *file.TaggedBytes,
 		libraryPaths []string,
 		scenarioNames []string,
 		passthrough []string,
@@ -57,7 +66,22 @@ func (l *libImpl) Compose(
 	passthrough []string,
 	showPlan bool,
 	showDiff bool) ([]byte, error) {
-	return l.composer.Compose(templatePath, libraryPaths, scenarioNames, passthrough, showPlan, showDiff)
+
+	in, err := l.file.ReadAndTag(templatePath)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to load template %s", err, templatePath)
+	}
+	return l.ComposeFromBytes(in, libraryPaths, scenarioNames, passthrough, showPlan, showDiff)
+}
+
+func (l *libImpl) ComposeFromBytes(
+	template *file.TaggedBytes,
+	libraryPaths []string,
+	scenarioNames []string,
+	passthrough []string,
+	showPlan bool,
+	showDiff bool) ([]byte, error) {
+	return l.composer.Compose(template, libraryPaths, scenarioNames, passthrough, showPlan, showDiff)
 }
 
 func (l *libImpl) ListScenarios(libraryPaths []string, all bool) ([]scenario.ScenarioEntry, error) {

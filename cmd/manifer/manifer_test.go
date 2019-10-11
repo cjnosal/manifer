@@ -69,6 +69,60 @@ set: by_first
 		}
 	})
 
+	t.Run("TestCompose Additional Compositions", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"compose",
+			"-l",
+			"../../test/data/library.yml",
+			"-t",
+			"../../test/data/template.yml",
+			"-s",
+			"placeholder",
+			"--",
+			"-v",
+			"path3=/final?",
+			"-v",
+			"value3=touch",
+			";",
+			"-l",
+			"../../test/data/base_library.yml",
+			"-s",
+			"placeholder",
+			"-s",
+			"base",
+			"--",
+			"-v",
+			"path3=/what?",
+			"-v",
+			"value3=now",
+		)
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		expectedOut := `base1: a
+base2: b
+final: touch
+fixed: from_scenario
+foo: bar
+reused: by_second
+set: by_first
+what: now
+`
+
+		if !cmp.Equal(outWriter.String(), expectedOut) {
+			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
+				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
+
 	t.Run("TestListPlain", func(t *testing.T) {
 		cmd := exec.Command(
 			"../../manifer",

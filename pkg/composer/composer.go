@@ -8,7 +8,7 @@ import (
 
 type Composer interface {
 	Compose(
-		templatePath string,
+		template *file.TaggedBytes,
 		libraryPaths []string,
 		scenarioNames []string,
 		passthrough []string,
@@ -23,7 +23,7 @@ type ComposerImpl struct {
 }
 
 func (c *ComposerImpl) Compose(
-	templatePath string,
+	template *file.TaggedBytes,
 	libraryPaths []string,
 	scenarioNames []string,
 	passthrough []string,
@@ -35,10 +35,7 @@ func (c *ComposerImpl) Compose(
 		return nil, fmt.Errorf("%w\n  while trying to resolve scenarios", err)
 	}
 
-	in, err := c.File.ReadAndTag(templatePath)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to load template %s", err, templatePath)
-	}
+	in := template
 	var out []byte
 
 	if len(plan.Steps) > 0 || len(plan.Global.Args) > 0 {
