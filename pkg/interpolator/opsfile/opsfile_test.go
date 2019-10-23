@@ -104,6 +104,77 @@ func TestParsePassthroughFlags(t *testing.T) {
 	})
 }
 
+func TestValidate(t *testing.T) {
+	t.Run("valid ops file", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+
+		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+
+		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
+		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(nil)
+
+		valid, err := subject.ValidateSnippet("/foo")
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		if !valid {
+			t.Errorf("Expected ValidateSnippet to return true")
+		}
+	})
+
+	t.Run("invalid ops file", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+
+		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+
+		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
+		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(errors.New("oops"))
+
+		valid, err := subject.ValidateSnippet("/foo")
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		if valid {
+			t.Errorf("Expected ValidateSnippet to return false")
+		}
+	})
+
+	t.Run("file error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+
+		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+
+		mockFile.EXPECT().Read("/foo").Times(1).Return(nil, errors.New("oops"))
+
+		valid, err := subject.ValidateSnippet("/foo")
+
+		expectedError := errors.New("oops\n  while validating opsfile /foo")
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
+			t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
+		}
+
+		if valid {
+			t.Errorf("Expected ValidateSnippet to return false")
+		}
+	})
+}
+
 func TestWrapper(t *testing.T) {
 	cases := []struct {
 		name             string

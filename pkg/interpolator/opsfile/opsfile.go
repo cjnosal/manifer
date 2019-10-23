@@ -13,21 +13,25 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func NewOpsFileInterpolator(y yaml.YamlAccess) interpolator.Interpolator {
+func NewOpsFileInterpolator(y yaml.YamlAccess, f file.FileAccess) interpolator.Interpolator {
 	i := &ofInt{
 		Yaml: y,
+		File: f,
 	}
 	return &interpolatorWrapper{
 		interpolator: i,
+		file:         f,
 	}
 }
 
 type interpolatorWrapper struct {
 	interpolator opFileInterpolator
+	file         file.FileAccess
 }
 
 type ofInt struct {
 	Yaml yaml.YamlAccess
+	File file.FileAccess
 }
 
 type opFileInterpolator interface {
@@ -37,6 +41,16 @@ type opFileInterpolator interface {
 type opFlags struct {
 	// flag string copied from bosh cli ops_flag.go
 	Oppaths []string `long:"ops-file" short:"o" value-name:"PATH" description:"Load manifest operations from a YAML file"`
+}
+
+func (i *interpolatorWrapper) ValidateSnippet(path string) (bool, error) {
+	content, err := i.file.Read(path)
+	if err != nil {
+		return false, fmt.Errorf("%w\n  while validating opsfile %s", err, path)
+	}
+	opDefs := []patch.OpDefinition{}
+	err = i.interpolator.(*ofInt).Yaml.Unmarshal(content, &opDefs)
+	return err == nil, nil
 }
 
 func (i *interpolatorWrapper) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {

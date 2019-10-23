@@ -381,4 +381,121 @@ dependencies:
 		})
 
 	})
+
+	t.Run("TestImport file", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"import",
+			"-p",
+			"../../test/data/opsfile.yml",
+			"-o",
+			"../../test/data/generated.yml",
+		)
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		cat := exec.Command(
+			"cat",
+			"../../test/data/generated.yml",
+		)
+		outWriter := &test.StringWriter{}
+		cat.Stdout = outWriter
+
+		err = cat.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		expectedOut := `libraries: []
+type: opsfile
+scenarios:
+  - name: opsfile
+    description: imported from opsfile.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: opsfile.yml
+        args: []
+    scenarios: []
+`
+
+		if !cmp.Equal(outWriter.String(), expectedOut) {
+			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
+				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
+
+	t.Run("TestImport directory", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"import",
+			"-r",
+			"-p",
+			"../../test/data",
+			"-o",
+			"../../test/data/generated.yml",
+		)
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		cat := exec.Command(
+			"cat",
+			"../../test/data/generated.yml",
+		)
+		outWriter := &test.StringWriter{}
+		cat.Stdout = outWriter
+
+		err = cat.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		expectedOut := `libraries: []
+type: opsfile
+scenarios:
+  - name: empty_opsfile
+    description: imported from empty_opsfile.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: empty_opsfile.yml
+        args: []
+    scenarios: []
+  - name: opsfile
+    description: imported from opsfile.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: opsfile.yml
+        args: []
+    scenarios: []
+  - name: opsfile_with_vars
+    description: imported from opsfile_with_vars.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: opsfile_with_vars.yml
+        args: []
+    scenarios: []
+  - name: placeholder_opsfile
+    description: imported from placeholder_opsfile.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: placeholder_opsfile.yml
+        args: []
+    scenarios: []
+`
+
+		if !cmp.Equal(outWriter.String(), expectedOut) {
+			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
+				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
 }

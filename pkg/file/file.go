@@ -16,6 +16,8 @@ type FileAccess interface {
 	ResolveRelativeFrom(targetFile string, sourceFile string) (string, error)
 	ResolveRelativeFromWD(targetFile string) (string, error)
 	GetWorkingDirectory() (string, error)
+	IsDir(path string) (bool, error)
+	Walk(path string, callback func(path string, info os.FileInfo, err error) error) error
 }
 
 type FileIO struct{}
@@ -57,11 +59,11 @@ func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) (string
 		return targetFile, nil
 	} else {
 		dir := sourceFile
-		dirInfo, err := os.Stat(dir)
+		isDir, err := f.IsDir(dir)
 		if err != nil {
 			return "", err
 		}
-		if !dirInfo.IsDir() {
+		if !isDir {
 			dir = filepath.Dir(sourceFile)
 		}
 		return filepath.Clean(filepath.Join(dir, targetFile)), nil
@@ -69,18 +71,25 @@ func (f *FileIO) ResolveRelativeTo(targetFile string, sourceFile string) (string
 }
 
 func (f *FileIO) ResolveRelativeFrom(targetFile string, sourceFile string) (string, error) {
-	if !filepath.IsAbs(targetFile) {
-		return targetFile, nil
-	}
-	dir := sourceFile
-	dirInfo, err := os.Stat(dir)
+	dir, err := filepath.Abs(sourceFile)
 	if err != nil {
 		return "", err
 	}
-	if !dirInfo.IsDir() {
-		dir = filepath.Dir(sourceFile)
+	isDir, err := f.IsDir(dir)
+	if err != nil {
+		return "", err
 	}
-	return filepath.Rel(dir, targetFile)
+	if !isDir {
+		dir, err = filepath.Abs(filepath.Dir(sourceFile))
+		if err != nil {
+			return "", err
+		}
+	}
+	target, err := filepath.Abs(targetFile)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Rel(dir, target)
 }
 
 func (f *FileIO) ResolveRelativeFromWD(targetFile string) (string, error) {
@@ -96,4 +105,16 @@ func (f *FileIO) ResolveRelativeFromWD(targetFile string) (string, error) {
 
 func (f *FileIO) GetWorkingDirectory() (string, error) {
 	return os.Getwd()
+}
+
+func (f *FileIO) IsDir(path string) (bool, error) {
+	pathInfo, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return pathInfo.IsDir(), nil
+}
+
+func (f *FileIO) Walk(path string, callback func(path string, info os.FileInfo, err error) error) error {
+	return filepath.Walk(path, callback)
 }

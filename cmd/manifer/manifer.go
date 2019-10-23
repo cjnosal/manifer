@@ -26,6 +26,7 @@ func main() {
 	subcommands.Register(commands.NewListCommand(logger, writer, maniferLib), "")
 	subcommands.Register(commands.NewSearchCommand(logger, writer, maniferLib), "")
 	subcommands.Register(commands.NewInspectCommand(logger, writer, maniferLib), "")
+	subcommands.Register(commands.NewImportCommand(logger, writer, maniferLib), "")
 
 	// run
 	flag.Parse()

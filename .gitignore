@@ -16,3 +16,6 @@ mock_*
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Integration test output
+test/data/generated.yml

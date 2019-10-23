@@ -7,6 +7,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/composer"
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/importer"
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/interpolator/opsfile"
 	"github.com/cjnosal/manifer/pkg/library"
@@ -18,12 +19,15 @@ import (
 
 // logger used for Composer's showDiff/showPlan
 func NewManifer(logger io.Writer) Manifer {
+	fileIO := &file.FileIO{}
+	opsFileInterpolator := opsfile.NewOpsFileInterpolator(&yaml.Yaml{}, fileIO)
 	return &libImpl{
 		composer: newComposer(logger),
 		lister:   newLister(),
 		loader:   newLoader(),
-		file:     &file.FileIO{},
-		opInt:    opsfile.NewOpsFileInterpolator(&yaml.Yaml{}),
+		file:     fileIO,
+		opInt:    opsFileInterpolator,
+		importer: importer.NewImporter(fileIO, opsFileInterpolator),
 	}
 }
 
@@ -49,6 +53,8 @@ type Manifer interface {
 	GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error)
 
 	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
+
+	Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error)
 }
 
 type libImpl struct {
@@ -57,6 +63,7 @@ type libImpl struct {
 	loader   *library.Loader
 	file     *file.FileIO
 	opInt    interpolator.Interpolator
+	importer importer.Importer
 }
 
 func (l *libImpl) Compose(
@@ -106,6 +113,10 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 
 func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
 	return l.opInt.ParsePassthroughFlags(passthroughArgs)
+}
+
+func (l *libImpl) Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error) {
+	return l.importer.Import(libType, path, recursive, outPath)
 }
 
 func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {
@@ -166,7 +177,7 @@ func newComposer(logger io.Writer) composer.Composer {
 		File: file,
 		Yaml: yaml,
 	}
-	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml)
+	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml, file)
 	resolver := &composer.Resolver{
 		Loader:          loader,
 		SnippetResolver: opsFileInterpolator,

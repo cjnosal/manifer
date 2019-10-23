@@ -15,6 +15,22 @@ combine the library and template to compose the final document.
 - compose:     interpolate for all snippets defined in a set of scenarios
 
 # subcommands
+## import
+```
+import [--recursive] --path <import path> --out <library path>:
+  create a library from a directory of opsfiles.
+  -o string
+        Path to save generated library file
+  -out string
+        Path to save generated library file
+  -p string
+        Directory or opsfile to import
+  -path string
+        Directory or opsfile to import
+  -r    Import opsfiles from subdirectories
+  -recursive
+        Import opsfiles from subdirectories
+```
 ## list
 ```
 ./manifer list [--all] (--library <library path>...):
