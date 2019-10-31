@@ -14,6 +14,18 @@ combine the library and template to compose the final document.
 - interpolate: apply a snippet to the template
 - compose:     interpolate for all snippets defined in a set of scenarios
 
+# getting started
+1) generate a library from your collection of opsfiles
+`manifer import -r -p ./ops-dir -o ./new-lib.yml`
+2) view the generated scenarios
+`manifer list -l new-lib.yml`
+3) add scenarios for your common use cases, which can define variables or invoke other scenarios
+`manifer add -l new-lib.yml -n use_case -d "thing I need frequently" -s "dependency_name" -- -v foo=bar -o extra-op.yml`
+4) inspect the scenario you created
+`manifer inspect -l new-lib.yml -s use_case`
+5) use your new scenario to modify a template
+`manifer compose -l new-lib.yml -t base.yml -s use_case` 
+
 # subcommands
 ## import
 ```
