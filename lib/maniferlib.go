@@ -144,13 +144,19 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	if err != nil {
 		return nil, err
 	}
+	args := []string{}
+	snippets := []library.Snippet{}
+	if node != nil {
+		args = node.GlobalArgs // passthrough node treats all variables as global but library scenarios need appropriate scope
+		snippets = node.Snippets
+	}
 
 	scenario := library.Scenario{
 		Name:        name,
 		Description: description,
 		GlobalArgs:  []string{},
-		Args:        node.GlobalArgs, // passthrough node treats all variables as global but library scenarios need appropriate scope
-		Snippets:    node.Snippets,
+		Args:        args,
+		Snippets:    snippets,
 		Scenarios:   refs,
 	}
 
