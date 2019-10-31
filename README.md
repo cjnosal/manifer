@@ -17,7 +17,7 @@ combine the library and template to compose the final document.
 # subcommands
 ## import
 ```
-import [--recursive] --path <import path> --out <library path>:
+./manifer import [--recursive] --path <import path> --out <library path>:
   create a library from a directory of opsfiles.
   -o string
         Path to save generated library file
@@ -30,6 +30,27 @@ import [--recursive] --path <import path> --out <library path>:
   -r    Import opsfiles from subdirectories
   -recursive
         Import opsfiles from subdirectories
+```
+## add
+```
+./manifer add --library <library path> --name <scenario name> [--description <text>] [--scenario <dependency>...] [-- passthrough flags ...]:
+  add a new scenario to a library.
+  -d string
+        Informative description of the new scenario
+  -description string
+        Informative description of the new scenario
+  -l string
+        Path to library file
+  -library string
+        Path to library file
+  -n string
+        Name to identify the new scenario
+  -name string
+        Name to identify the new scenario
+  -s value
+        Dependency of the new scenario
+  -scenario value
+        Dependency of the new scenario
 ```
 ## list
 ```

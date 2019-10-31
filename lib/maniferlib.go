@@ -55,6 +55,8 @@ type Manifer interface {
 	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 
 	Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error)
+
+	AddScenario(libraryPath string, name string, description string, scenarioDeps []string, passthrough []string) (*library.Library, error)
 }
 
 type libImpl struct {
@@ -117,6 +119,70 @@ func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNo
 
 func (l *libImpl) Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error) {
 	return l.importer.Import(libType, path, recursive, outPath)
+}
+
+func (l *libImpl) AddScenario(libraryPath string, name string, description string, scenarioDeps []string, passthrough []string) (*library.Library, error) {
+	loaded, err := l.loader.Load([]string{libraryPath})
+	if err != nil {
+		return nil, err
+	}
+	lib := loaded.TopLibraries[0]
+
+	refs := []library.ScenarioRef{}
+	for _, dep := range scenarioDeps {
+		_, err = loaded.GetScenarioTree(dep)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, library.ScenarioRef{
+			Name: dep,
+			Args: []string{},
+		})
+	}
+
+	node, err := l.GetScenarioNode(passthrough)
+	if err != nil {
+		return nil, err
+	}
+
+	scenario := library.Scenario{
+		Name:        name,
+		Description: description,
+		GlobalArgs:  []string{},
+		Args:        node.GlobalArgs, // passthrough node treats all variables as global but library scenarios need appropriate scope
+		Snippets:    node.Snippets,
+		Scenarios:   refs,
+	}
+
+	lib.Scenarios = append(lib.Scenarios, scenario)
+
+	err = l.makeLibraryPathsRelative(libraryPath, lib)
+	if err != nil {
+		return nil, err
+	}
+
+	return lib, nil
+}
+
+func (l *libImpl) makeLibraryPathsRelative(libpath string, lib *library.Library) error {
+	for i, libRef := range lib.Libraries {
+		rel, err := l.file.ResolveRelativeFrom(libRef.Path, libpath)
+		if err != nil {
+			return err
+		}
+		lib.Libraries[i].Path = rel
+	}
+
+	for _, scenario := range lib.Scenarios {
+		for i, snippet := range scenario.Snippets {
+			rel, err := l.file.ResolveRelativeFrom(snippet.Path, libpath)
+			if err != nil {
+				return err
+			}
+			scenario.Snippets[i].Path = rel
+		}
+	}
+	return nil
 }
 
 func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {

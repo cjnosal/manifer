@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/cjnosal/manifer/test"
 	"github.com/google/go-cmp/cmp"
+	"io/ioutil"
 	"os/exec"
 	"testing"
 )
@@ -491,6 +492,80 @@ scenarios:
       - path: placeholder_opsfile.yml
         args: []
     scenarios: []
+`
+
+		if !cmp.Equal(outWriter.String(), expectedOut) {
+			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
+				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
+
+	t.Run("TestAddScenario", func(t *testing.T) {
+		emptyLib := []byte(`
+type: opsfile
+scenarios:
+ - name: dep`)
+		err := ioutil.WriteFile("../../test/data/generated.yml", emptyLib, 0644)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		cmd := exec.Command(
+			"../../manifer",
+			"add",
+			"-l",
+			"../../test/data/generated.yml",
+			"-n",
+			"new scenario",
+			"-d",
+			"scenario description",
+			"-s",
+			"dep",
+			"--",
+			"-o",
+			"../../test/data/opsfile_with_vars.yml",
+			"-v",
+			"value=foo",
+		)
+
+		err = cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		cat := exec.Command(
+			"cat",
+			"../../test/data/generated.yml",
+		)
+		outWriter := &test.StringWriter{}
+		cat.Stdout = outWriter
+
+		err = cat.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		expectedOut := `libraries: []
+type: opsfile
+scenarios:
+  - name: dep
+    description: ""
+    global_args: []
+    args: []
+    snippets: []
+    scenarios: []
+  - name: new scenario
+    description: scenario description
+    global_args: []
+    args:
+      - -v
+      - value=foo
+    snippets:
+      - path: opsfile_with_vars.yml
+        args: []
+    scenarios:
+      - name: dep
+        args: []
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {
