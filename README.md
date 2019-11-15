@@ -15,8 +15,11 @@ combine the library and template to compose the final document.
 - compose:     interpolate for all snippets defined in a set of scenarios
 
 # getting started
-1) generate a library from your collection of opsfiles
+1a) generate a library from your collection of opsfiles
 `manifer import -r -p ./ops-dir -o ./new-lib.yml`
+or
+1b) generate a library from your yaml file
+`manifer generate -t ./template.yml -o ./new-lib.yml -d ./opsdir`
 2) view the generated scenarios
 `manifer list -l new-lib.yml`
 3) add scenarios for your common use cases, which can define variables or invoke other scenarios
@@ -42,6 +45,23 @@ combine the library and template to compose the final document.
   -r    Import opsfiles from subdirectories
   -recursive
         Import opsfiles from subdirectories
+```
+## generate
+```
+./manifer generate --template <yaml path> --out <library path> [--directory <snippet path>]:
+  create a library based on the structure of a yaml file.
+  -d string
+        Directory to save generated snippets (default out/ops)
+  -directory string
+        Directory to save generated snippets (default out/ops)
+  -o string
+        Path to save generated library file
+  -out string
+        Path to save generated library file
+  -t string
+        Template to generate from
+  -template string
+        Template to generate from
 ```
 ## add
 ```

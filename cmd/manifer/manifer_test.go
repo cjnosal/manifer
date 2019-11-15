@@ -383,7 +383,111 @@ dependencies:
 
 	})
 
+	t.Run("TestGenerate from template", func(t *testing.T) {
+
+		exec.Command(
+			"rm",
+			"-rf",
+			"../../test/data/generated_ops",
+			"../../test/data/generated.yml",
+		).Run()
+
+		cmd := exec.Command(
+			"../../manifer",
+			"generate",
+			"-t",
+			"../../test/data/base_library.yml",
+			"-d",
+			"../../test/data/generated_ops",
+			"-o",
+			"../../test/data/generated.yml",
+		)
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		cat := exec.Command(
+			"cat",
+			"../../test/data/generated.yml",
+		)
+		outWriter := &test.StringWriter{}
+		cat.Stdout = outWriter
+
+		err = cat.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		expectedOut := `libraries: []
+type: opsfile
+scenarios:
+  - name: add_scenario
+    description: imported from add_scenario.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/add_scenario.yml
+        args: []
+    scenarios: []
+  - name: add_snippet
+    description: imported from add_snippet.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/scenario/add_snippet.yml
+        args: []
+    scenarios: []
+  - name: set_snippet
+    description: imported from set_snippet.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/scenario/set_snippet.yml
+        args: []
+    scenarios: []
+  - name: add_arg
+    description: imported from add_arg.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/scenario/snippet/add_arg.yml
+        args: []
+    scenarios: []
+  - name: set_scenario
+    description: imported from set_scenario.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/set_scenario.yml
+        args: []
+    scenarios: []
+  - name: set_type
+    description: imported from set_type.yml
+    global_args: []
+    args: []
+    snippets:
+      - path: generated_ops/set_type.yml
+        args: []
+    scenarios: []
+`
+
+		if !cmp.Equal(outWriter.String(), expectedOut) {
+			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
+				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
+
 	t.Run("TestImport file", func(t *testing.T) {
+
+		exec.Command(
+			"rm",
+			"-rf",
+			"../../test/data/generated_ops",
+			"../../test/data/generated.yml",
+		).Run()
+
 		cmd := exec.Command(
 			"../../manifer",
 			"import",
@@ -430,6 +534,14 @@ scenarios:
 	})
 
 	t.Run("TestImport directory", func(t *testing.T) {
+
+		exec.Command(
+			"rm",
+			"-rf",
+			"../../test/data/generated_ops",
+			"../../test/data/generated.yml",
+		).Run()
+
 		cmd := exec.Command(
 			"../../manifer",
 			"import",
@@ -501,6 +613,14 @@ scenarios:
 	})
 
 	t.Run("TestAddScenario", func(t *testing.T) {
+
+		exec.Command(
+			"rm",
+			"-rf",
+			"../../test/data/generated_ops",
+			"../../test/data/generated.yml",
+		).Run()
+
 		emptyLib := []byte(`
 type: opsfile
 scenarios:

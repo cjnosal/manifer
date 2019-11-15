@@ -18,6 +18,7 @@ type FileAccess interface {
 	GetWorkingDirectory() (string, error)
 	IsDir(path string) (bool, error)
 	Walk(path string, callback func(path string, info os.FileInfo, err error) error) error
+	MkDir(path string) error
 }
 
 type FileIO struct{}
@@ -117,4 +118,8 @@ func (f *FileIO) IsDir(path string) (bool, error) {
 
 func (f *FileIO) Walk(path string, callback func(path string, info os.FileInfo, err error) error) error {
 	return filepath.Walk(path, callback)
+}
+
+func (f *FileIO) MkDir(path string) error {
+	return os.MkdirAll(path, 0755)
 }

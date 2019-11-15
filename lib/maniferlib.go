@@ -2,7 +2,9 @@ package lib
 
 import (
 	"fmt"
+	y "gopkg.in/yaml.v3"
 	"io"
+	"path/filepath"
 
 	"github.com/cjnosal/manifer/pkg/composer"
 	"github.com/cjnosal/manifer/pkg/diff"
@@ -20,12 +22,14 @@ import (
 // logger used for Composer's showDiff/showPlan
 func NewManifer(logger io.Writer) Manifer {
 	fileIO := &file.FileIO{}
-	opsFileInterpolator := opsfile.NewOpsFileInterpolator(&yaml.Yaml{}, fileIO)
+	yaml := &yaml.Yaml{}
+	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml, fileIO)
 	return &libImpl{
 		composer: newComposer(logger),
 		lister:   newLister(),
 		loader:   newLoader(),
 		file:     fileIO,
+		yaml:     yaml,
 		opInt:    opsFileInterpolator,
 		importer: importer.NewImporter(fileIO, opsFileInterpolator),
 	}
@@ -54,6 +58,8 @@ type Manifer interface {
 
 	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 
+	Generate(libType library.Type, templatePath string, libPath string, snippetDir string) (*library.Library, error)
+
 	Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error)
 
 	AddScenario(libraryPath string, name string, description string, scenarioDeps []string, passthrough []string) (*library.Library, error)
@@ -64,6 +70,7 @@ type libImpl struct {
 	lister   scenario.ScenarioLister
 	loader   *library.Loader
 	file     *file.FileIO
+	yaml     yaml.YamlAccess
 	opInt    interpolator.Interpolator
 	importer importer.Importer
 }
@@ -115,6 +122,46 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 
 func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
 	return l.opInt.ParsePassthroughFlags(passthroughArgs)
+}
+
+func (l *libImpl) Generate(libType library.Type, templatePath string, libPath string, snippetDir string) (*library.Library, error) {
+	// parse template
+	templateBytes, err := l.file.Read(templatePath)
+	if err != nil {
+		return nil, err
+	}
+	node := &y.Node{}
+	err = l.yaml.Unmarshal(templateBytes, node)
+	if err != nil {
+		return nil, err
+	}
+	schemaBuilder := &yaml.SchemaBuilder{}
+
+	// generate snippets from schema
+	err = l.yaml.Walk(node, schemaBuilder.OnVisit)
+	if err != nil {
+		return nil, err
+	}
+	ops, err := l.opInt.GenerateSnippets(schemaBuilder.Root)
+	if err != nil {
+		return nil, err
+	}
+
+	// write snippets
+	for _, op := range ops {
+		snippetPath := filepath.Join(snippetDir, op.Tag)
+		dir := filepath.Dir(snippetPath)
+		err = l.file.MkDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		err = l.file.Write(snippetPath, op.Bytes, 0644)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return l.Import(libType, snippetDir, true, libPath)
 }
 
 func (l *libImpl) Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error) {

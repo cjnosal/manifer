@@ -19,3 +19,4 @@ mock_*
 
 # Integration test output
 test/data/generated.yml
+test/data/generated_ops

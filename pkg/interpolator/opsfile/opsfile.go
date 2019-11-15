@@ -18,15 +18,20 @@ func NewOpsFileInterpolator(y yaml.YamlAccess, f file.FileAccess) interpolator.I
 		Yaml: y,
 		File: f,
 	}
+	g := &opFileGenerator{
+		yaml: y,
+	}
 	return &interpolatorWrapper{
 		interpolator: i,
 		file:         f,
+		generator:    g,
 	}
 }
 
 type interpolatorWrapper struct {
 	interpolator opFileInterpolator
 	file         file.FileAccess
+	generator    *opFileGenerator
 }
 
 type ofInt struct {
@@ -101,6 +106,10 @@ func (i *interpolatorWrapper) Interpolate(template *file.TaggedBytes, snippet *f
 	}
 
 	return templateBytes, nil
+}
+
+func (i *interpolatorWrapper) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
+	return i.generator.generateSnippets(schema)
 }
 
 func (i *ofInt) interpolate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, args []string) ([]byte, error) {
