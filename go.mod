@@ -18,7 +18,6 @@ require (
 	github.com/golang/mock v1.2.0 // pin v1.2.0 for https://github.com/golang/mock/issues/325
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/go-cmp v0.3.1
-	github.com/google/subcommands v1.0.1
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kr/pretty v0.1.0 // indirect
@@ -29,6 +28,7 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pivotal-cf/paraphernalia v0.0.0-20180203224945-a64ae2051c20 // indirect
 	github.com/sergi/go-diff v1.0.0
+	github.com/spf13/cobra v0.0.5
 	github.com/square/certstrap v1.1.1 // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc // indirect

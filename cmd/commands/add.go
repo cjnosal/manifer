@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"context"
-	"flag"
 	"io"
 	"log"
+	"os"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/file"
@@ -16,8 +15,7 @@ import (
 type addCmd struct {
 	name        string
 	description string
-	libraryPath string
-	scenarios   arrayFlags
+	scenarios   []string
 
 	manifer lib.Manifer
 
@@ -25,67 +23,63 @@ type addCmd struct {
 	writer io.Writer
 }
 
-func NewAddCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &addCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var add addCmd
 
-func (*addCmd) Name() string     { return "add" }
-func (*addCmd) Synopsis() string { return "add a new scenario to a library." }
-func (*addCmd) Usage() string {
-	return `add --library <library path> --name <scenario name> [--description <text>] [--scenario <dependency>...] [-- passthrough flags ...]:
+func NewAddCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	add.logger = log.New(l, "", 0)
+	add.writer = w
+	add.manifer = m
+
+	cobraAdd := &cobra.Command{
+		Use:   "add",
+		Short: "add a new scenario to a library.",
+		Long: `add --library <library path> --name <scenario name> [--description <text>] [--scenario <dependency>...] [-- passthrough flags ...]:
   add a new scenario to a library.
-`
+`,
+		Run:              add.execute,
+		TraverseChildren: true,
+	}
+
+	cobraAdd.Flags().StringSliceVarP(&libraryPaths, "library", "l", []string{}, "Path to library file")
+	cobraAdd.Flags().StringVarP(&add.name, "name", "n", "", "Name to identify the new scenario")
+	cobraAdd.Flags().StringVarP(&add.description, "description", "d", "", "Informative description of the new scenario")
+	cobraAdd.Flags().StringSliceVarP(&add.scenarios, "scenario", "s", []string{}, "Dependency of the new scenario")
+
+	return cobraAdd
 }
 
-func (p *addCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.libraryPath, "library", "", "Path to library file")
-	f.StringVar(&p.libraryPath, "l", "", "Path to library file")
-	f.StringVar(&p.name, "name", "", "Name to identify the new scenario")
-	f.StringVar(&p.name, "n", "", "Name to identify the new scenario")
-	f.StringVar(&p.description, "description", "", "Informative description of the new scenario")
-	f.StringVar(&p.description, "d", "", "Informative description of the new scenario")
-	f.Var(&p.scenarios, "scenario", "Dependency of the new scenario")
-	f.Var(&p.scenarios, "s", "Dependency of the new scenario")
-}
-
-func (p *addCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	if p.libraryPath == "" {
+func (p *addCmd) execute(cmd *cobra.Command, args []string) {
+	if len(libraryPaths) != 1 {
 		p.logger.Printf("Library path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
 	if p.name == "" {
 		p.logger.Printf("Name not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
-	lib, err := p.manifer.AddScenario(p.libraryPath, p.name, p.description, p.scenarios, f.Args())
+	lib, err := p.manifer.AddScenario(libraryPaths[0], p.name, p.description, p.scenarios, args)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while adding scenario to library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	yaml := &yaml.Yaml{}
 	outBytes, err := yaml.Marshal(lib)
 	if err != nil {
 		p.logger.Printf("%v\n  while marshaling updated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	file := &file.FileIO{}
-	err = file.Write(p.libraryPath, outBytes, 0644)
+	err = file.Write(libraryPaths[0], outBytes, 0644)
 	if err != nil {
 		p.logger.Printf("%v\n  while overwriting updated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }

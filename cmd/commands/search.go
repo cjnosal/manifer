@@ -1,71 +1,69 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
-	"flag"
 	"io"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/scenario"
 )
 
 type searchCmd struct {
-	libraryPaths arrayFlags
-	printJson    bool
+	printJson bool
 
 	logger  *log.Logger
 	writer  io.Writer
 	manifer lib.Manifer
 }
 
-func NewSearchCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &searchCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var search searchCmd
 
-func (*searchCmd) Name() string { return "search" }
-func (*searchCmd) Synopsis() string {
-	return "search scenarios in selected libraries by name and description."
-}
-func (*searchCmd) Usage() string {
-	return `search (--library <library path>...) (query...):
+func NewSearchCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	search.logger = log.New(l, "", 0)
+	search.writer = w
+	search.manifer = m
+
+	cobraSearch := &cobra.Command{
+		Use:   "search",
+		Short: "search scenarios in selected libraries by name and description.",
+		Long: `search (--library <library path>...) (query...):
   search scenarios in selected libraries by name and description.
-`
-}
-
-func (p *searchCmd) SetFlags(f *flag.FlagSet) {
-	f.Var(&p.libraryPaths, "library", "Path to library file")
-	f.Var(&p.libraryPaths, "l", "Path to library file")
-	f.BoolVar(&p.printJson, "json", false, "Print output in json format")
-	f.BoolVar(&p.printJson, "j", false, "Print output in json format")
-}
-
-func (p *searchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	if len(p.libraryPaths) == 0 {
-		p.logger.Printf("Library not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+`,
+		Args:             cobra.MinimumNArgs(1),
+		Run:              search.execute,
+		TraverseChildren: true,
 	}
 
-	entries, err := p.manifer.ListScenarios(p.libraryPaths, true)
+	cobraSearch.Flags().StringSliceVarP(&libraryPaths, "library", "l", []string{}, "Path to library file")
+	cobraSearch.Flags().BoolVarP(&search.printJson, "json", "j", false, "Print output in json format")
+
+	return cobraSearch
+}
+
+func (p *searchCmd) execute(cmd *cobra.Command, args []string) {
+
+	if len(libraryPaths) == 0 {
+		p.logger.Printf("Library not specified")
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
+	}
+
+	entries, err := p.manifer.ListScenarios(libraryPaths, true)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while looking up scenarios", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	matches := []scenario.ScenarioEntry{}
 	for _, e := range entries {
-		for _, query := range f.Args() {
+		for _, query := range args {
 			if strings.Contains(e.Name, query) || strings.Contains(e.Description, query) {
 				matches = append(matches, e)
 				break
@@ -83,10 +81,8 @@ func (p *searchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing search output", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }
 
 func (p *searchCmd) formatJson(entries []scenario.ScenarioEntry) []byte {

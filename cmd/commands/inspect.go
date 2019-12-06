@@ -1,15 +1,14 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/library"
@@ -17,75 +16,69 @@ import (
 )
 
 type inspectCmd struct {
-	libraryPaths arrayFlags
-	scenarios    arrayFlags
-	printJson    bool
-	printPlan    bool
-	printTree    bool
+	scenarios []string
+	printJson bool
+	printPlan bool
+	printTree bool
 
 	logger  *log.Logger
 	writer  io.Writer
 	manifer lib.Manifer
 }
 
-func NewInspectCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &inspectCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var inspect inspectCmd
 
-func (*inspectCmd) Name() string { return "inspect" }
-func (*inspectCmd) Synopsis() string {
-	return "inspect scenarios as a dependency tree or execution plan."
-}
-func (*inspectCmd) Usage() string {
-	return `inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...) [-- passthrough flags ...]:
+func NewInspectCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+	inspect.logger = log.New(l, "", 0)
+	inspect.writer = w
+	inspect.manifer = m
+
+	cobraInspect := &cobra.Command{
+		Use:   "inspect",
+		Short: "inspect scenarios as a dependency tree or execution plan.",
+		Long: `inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...) [-- passthrough flags ...]:
   inspect scenarios as a dependency tree or execution plan.
-`
+`,
+		Run:              inspect.execute,
+		TraverseChildren: true,
+	}
+
+	cobraInspect.Flags().StringSliceVarP(&libraryPaths, "library", "l", []string{}, "Path to library file")
+	cobraInspect.Flags().BoolVarP(&inspect.printJson, "json", "j", false, "Print output in json format")
+	cobraInspect.Flags().BoolVarP(&inspect.printPlan, "plan", "p", false, "Print execution plan")
+	cobraInspect.Flags().BoolVarP(&inspect.printTree, "tree", "t", false, "Print dependency tree (default)")
+	cobraInspect.Flags().StringSliceVarP(&inspect.scenarios, "scenario", "s", []string{}, "Scenario name in library")
+
+	return cobraInspect
 }
 
-func (p *inspectCmd) SetFlags(f *flag.FlagSet) {
-	f.Var(&p.libraryPaths, "library", "Path to library file")
-	f.Var(&p.libraryPaths, "l", "Path to library file")
-	f.BoolVar(&p.printJson, "json", false, "Print output in json format")
-	f.BoolVar(&p.printJson, "j", false, "Print output in json format")
-	f.BoolVar(&p.printPlan, "plan", false, "Print execution plan")
-	f.BoolVar(&p.printPlan, "p", false, "Print execution plan")
-	f.BoolVar(&p.printTree, "tree", false, "Print dependency tree (default)")
-	f.BoolVar(&p.printTree, "t", false, "Print dependency tree (default)")
-	f.Var(&p.scenarios, "scenario", "Scenario name in library")
-	f.Var(&p.scenarios, "s", "Scenario name in library")
-}
+func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 
-func (p *inspectCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	if len(p.libraryPaths) == 0 {
+	if len(libraryPaths) == 0 {
 		p.logger.Printf("Library not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
 	if len(p.scenarios) == 0 {
 		p.logger.Printf("A scenario must be specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
 	nodes := []*library.ScenarioNode{}
 	for _, name := range p.scenarios {
-		node, err := p.manifer.GetScenarioTree(p.libraryPaths, name)
+		node, err := p.manifer.GetScenarioTree(libraryPaths, name)
 		if err != nil {
 			p.logger.Printf("%v\n  while inspecting scenario %s", err, name)
-			return subcommands.ExitFailure
+			os.Exit(1)
 		}
 		nodes = append(nodes, node)
 	}
-	passthroughNode, err := p.manifer.GetScenarioNode(f.Args())
+	passthroughNode, err := p.manifer.GetScenarioNode(args)
 	if err != nil {
 		p.logger.Printf("%v\n  while trying to parse passthrough args", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 	if passthroughNode != nil {
 		nodes = append(nodes, passthroughNode)
@@ -117,10 +110,8 @@ func (p *inspectCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing inspect output", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }
 
 func (p *inspectCmd) formatJson(i interface{}) []byte {

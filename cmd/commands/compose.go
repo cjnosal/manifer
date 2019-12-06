@@ -1,12 +1,12 @@
 package commands
 
 import (
-	"context"
 	"flag"
 	"io"
 	"log"
+	"os"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/file"
@@ -14,8 +14,7 @@ import (
 
 type composeCmd struct {
 	templatePath string
-	libraryPaths arrayFlags
-	scenarios    arrayFlags
+	scenarios    []string
 	showPlan     bool
 	showDiff     bool
 
@@ -25,46 +24,44 @@ type composeCmd struct {
 	writer io.Writer
 }
 
-func NewComposeCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &composeCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var compose composeCmd
 
-func (*composeCmd) Name() string     { return "compose" }
-func (*composeCmd) Synopsis() string { return "compose a yml file from snippets." }
-func (*composeCmd) Usage() string {
-	return `compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...] [\;] :
+func NewComposeCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	compose.logger = log.New(l, "", 0)
+	compose.writer = w
+	compose.manifer = m
+
+	cobraCompose := &cobra.Command{
+		Use:   "compose",
+		Short: "compose a yml file from snippets.",
+		Long: `compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...] [\;] :
   compose a yml file from snippets. Use '\;' as a separator when reusing a scenario with different variables.
-`
+`,
+		Run:              compose.execute,
+		TraverseChildren: true,
+	}
+
+	cobraCompose.Flags().StringVarP(&compose.templatePath, "template", "t", "", "Path to initial template file")
+	cobraCompose.Flags().StringSliceVarP(&libraryPaths, "library", "l", []string{}, "Path to library file")
+	cobraCompose.Flags().StringSliceVarP(&compose.scenarios, "scenario", "s", []string{}, "Scenario name in library")
+	cobraCompose.Flags().BoolVarP(&compose.showPlan, "print", "p", false, "Show snippets and arguments being applied")
+	cobraCompose.Flags().BoolVarP(&compose.showDiff, "diff", "d", false, "Show diff after each snippet is applied")
+
+	return cobraCompose
 }
 
-func (p *composeCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.templatePath, "template", "", "Path to initial template file")
-	f.StringVar(&p.templatePath, "t", "", "Path to initial template file")
-	f.Var(&p.libraryPaths, "library", "Path to library file")
-	f.Var(&p.libraryPaths, "l", "Path to library file")
-	f.Var(&p.scenarios, "scenario", "Scenario name in library")
-	f.Var(&p.scenarios, "s", "Scenario name in library")
-	f.BoolVar(&p.showPlan, "print", false, "Show snippets and arguments being applied")
-	f.BoolVar(&p.showPlan, "p", false, "Show snippets and arguments being applied")
-	f.BoolVar(&p.showDiff, "diff", false, "Show diff after each snippet is applied")
-	f.BoolVar(&p.showDiff, "d", false, "Show diff after each snippet is applied")
-}
-
-func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *composeCmd) execute(cmd *cobra.Command, args []string) {
 
 	if p.templatePath == "" {
 		p.logger.Printf("Template path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
-	initialArgs, additionalCompositions := p.split(f.Args())
+	initialArgs, additionalCompositions := p.split(args)
 
-	libraryPaths := p.libraryPaths
+	libraryPaths := libraryPaths
 	outBytes, err := p.manifer.Compose(
 		p.templatePath,
 		libraryPaths,
@@ -76,7 +73,7 @@ func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	if err != nil {
 		p.logger.Printf("%v\n  while composing initial output", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	// additionalCompositions will:
@@ -99,7 +96,7 @@ func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 			p.logger.Printf("%v\n  while parsing flags for composition %d\nUsage for additional compositions:\n", err, i+1)
 			set.SetOutput(p.logger.Writer())
 			set.PrintDefaults()
-			return subcommands.ExitFailure
+			os.Exit(1)
 		}
 		libraryPaths = append(libraryPaths, newLibraryPaths...)
 
@@ -114,17 +111,15 @@ func (p *composeCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 		if err != nil {
 			p.logger.Printf("%v\n  during composition %d", err, i+1)
-			return subcommands.ExitFailure
+			os.Exit(1)
 		}
 	}
 
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing composed output", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }
 
 func (p *composeCmd) split(args []string) ([]string, [][]string) {

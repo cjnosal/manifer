@@ -1,13 +1,12 @@
 package commands
 
 import (
-	"context"
-	"flag"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/file"
@@ -25,44 +24,42 @@ type generateCmd struct {
 	manifer lib.Manifer
 }
 
-func NewGenerateCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &generateCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var generate generateCmd
 
-func (*generateCmd) Name() string { return "generate" }
-func (*generateCmd) Synopsis() string {
-	return "create a library based on the structure of a yaml file."
-}
-func (*generateCmd) Usage() string {
-	return `generate --template <yaml path> --out <library path> [--directory <snippet path>]:
+func NewGenerateCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	generate.logger = log.New(l, "", 0)
+	generate.writer = w
+	generate.manifer = m
+
+	cobraGenerate := &cobra.Command{
+		Use:   "generate",
+		Short: "create a library based on the structure of a yaml file.",
+		Long: `generate --template <yaml path> --out <library path> [--directory <snippet path>]:
   create a library based on the structure of a yaml file.
-`
+`,
+		Run:              generate.execute,
+		TraverseChildren: true,
+	}
+
+	cobraGenerate.Flags().StringVarP(&generate.lib, "out", "o", "", "Path to save generated library file")
+	cobraGenerate.Flags().StringVarP(&generate.template, "template", "t", "", "Template to generate from")
+	cobraGenerate.Flags().StringVarP(&generate.dir, "directory", "d", "", "Directory to save generated snippets (default out/ops)")
+
+	return cobraGenerate
 }
 
-func (p *generateCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.lib, "out", "", "Path to save generated library file")
-	f.StringVar(&p.lib, "o", "", "Path to save generated library file")
-	f.StringVar(&p.template, "template", "", "Template to generate from")
-	f.StringVar(&p.template, "t", "", "Template to generate from")
-	f.StringVar(&p.dir, "directory", "", "Directory to save generated snippets (default out/ops)")
-	f.StringVar(&p.dir, "d", "", "Directory to save generated snippets (default out/ops)")
-}
-
-func (p *generateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *generateCmd) execute(cmd *cobra.Command, args []string) {
 
 	if len(p.template) == 0 {
 		p.logger.Printf("Template path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 	if len(p.lib) == 0 {
 		p.logger.Printf("Output path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 	if len(p.dir) == 0 {
 		p.dir = filepath.Join(filepath.Dir(p.lib), "ops")
@@ -72,22 +69,20 @@ func (p *generateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 	if err != nil {
 		p.logger.Printf("%v\n  while generating library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	yaml := &yaml.Yaml{}
 	outBytes, err := yaml.Marshal(lib)
 	if err != nil {
 		p.logger.Printf("%v\n  while marshaling generated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	file := &file.FileIO{}
 	err = file.Write(p.lib, outBytes, 0644)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing generated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }

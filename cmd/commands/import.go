@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"context"
-	"flag"
 	"io"
 	"log"
+	"os"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/file"
@@ -24,64 +23,62 @@ type importCmd struct {
 	manifer lib.Manifer
 }
 
-func NewImportCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &importCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var imp importCmd
 
-func (*importCmd) Name() string     { return "import" }
-func (*importCmd) Synopsis() string { return "create a library from a directory of opsfiles." }
-func (*importCmd) Usage() string {
-	return `import [--recursive] --path <import path> --out <library path>:
+func NewImportCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	imp.logger = log.New(l, "", 0)
+	imp.writer = w
+	imp.manifer = m
+
+	cobraImport := &cobra.Command{
+		Use:   "import",
+		Short: "create a library from a directory of opsfiles.",
+		Long: `import [--recursive] --path <import path> --out <library path>:
   create a library from a directory of opsfiles.
-`
+`,
+		Run:              imp.execute,
+		TraverseChildren: true,
+	}
+
+	cobraImport.Flags().StringVarP(&imp.out, "out", "o", "", "Path to save generated library file")
+	cobraImport.Flags().StringVarP(&imp.path, "path", "p", "", "Directory or opsfile to import")
+	cobraImport.Flags().BoolVarP(&imp.recursive, "recursive", "r", false, "Import opsfiles from subdirectories")
+
+	return cobraImport
 }
 
-func (p *importCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.out, "out", "", "Path to save generated library file")
-	f.StringVar(&p.out, "o", "", "Path to save generated library file")
-	f.StringVar(&p.path, "path", "", "Directory or opsfile to import")
-	f.StringVar(&p.path, "p", "", "Directory or opsfile to import")
-	f.BoolVar(&p.recursive, "recursive", false, "Import opsfiles from subdirectories")
-	f.BoolVar(&p.recursive, "r", false, "Import opsfiles from subdirectories")
-}
-
-func (p *importCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *importCmd) execute(cmd *cobra.Command, args []string) {
 
 	if len(p.path) == 0 {
 		p.logger.Printf("Import path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 	if len(p.out) == 0 {
 		p.logger.Printf("Output path not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
 	}
 
 	lib, err := p.manifer.Import(library.OpsFile, p.path, p.recursive, p.out)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while generating library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	yaml := &yaml.Yaml{}
 	outBytes, err := yaml.Marshal(lib)
 	if err != nil {
 		p.logger.Printf("%v\n  while marshaling generated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	file := &file.FileIO{}
 	err = file.Write(p.out, outBytes, 0644)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing generated library", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }

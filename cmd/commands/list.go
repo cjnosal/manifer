@@ -1,21 +1,19 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
-	"flag"
 	"io"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/google/subcommands"
+	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/scenario"
 )
 
 type listCmd struct {
-	libraryPaths arrayFlags
 	allScenarios bool
 	printJson    bool
 
@@ -24,44 +22,44 @@ type listCmd struct {
 	manifer lib.Manifer
 }
 
-func NewListCommand(l io.Writer, w io.Writer, m lib.Manifer) subcommands.Command {
-	return &listCmd{
-		logger:  log.New(l, "", 0),
-		writer:  w,
-		manifer: m,
-	}
-}
+var list listCmd
 
-func (*listCmd) Name() string     { return "list" }
-func (*listCmd) Synopsis() string { return "list scenarios in selected libraries." }
-func (*listCmd) Usage() string {
-	return `list [--all] (--library <library path>...):
+func NewListCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
+
+	list.logger = log.New(l, "", 0)
+	list.writer = w
+	list.manifer = m
+
+	cobraList := &cobra.Command{
+		Use:   "list",
+		Short: "list scenarios in selected libraries.",
+		Long: `list [--all] (--library <library path>...):
   list scenarios in selected libraries.
-`
-}
-
-func (p *listCmd) SetFlags(f *flag.FlagSet) {
-	f.Var(&p.libraryPaths, "library", "Path to library file")
-	f.Var(&p.libraryPaths, "l", "Path to library file")
-	f.BoolVar(&p.allScenarios, "all", false, "Include all referenced libraries")
-	f.BoolVar(&p.allScenarios, "a", false, "Include all referenced libraries")
-	f.BoolVar(&p.printJson, "json", false, "Print output in json format")
-	f.BoolVar(&p.printJson, "j", false, "Print output in json format")
-}
-
-func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	if len(p.libraryPaths) == 0 {
-		p.logger.Printf("Library not specified")
-		p.logger.Printf(p.Usage())
-		return subcommands.ExitFailure
+`,
+		Run:              list.execute,
+		TraverseChildren: true,
 	}
 
-	entries, err := p.manifer.ListScenarios(p.libraryPaths, p.allScenarios)
+	cobraList.Flags().StringSliceVarP(&libraryPaths, "library", "l", []string{}, "Path to library file")
+	cobraList.Flags().BoolVarP(&list.printJson, "json", "j", false, "Print output in json format")
+	cobraList.Flags().BoolVarP(&list.printJson, "allScenarios", "a", false, "Include all referenced libraries")
+
+	return cobraList
+}
+
+func (p *listCmd) execute(cmd *cobra.Command, args []string) {
+
+	if len(libraryPaths) == 0 {
+		p.logger.Printf("Library not specified")
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
+	}
+
+	entries, err := p.manifer.ListScenarios(libraryPaths, p.allScenarios)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while looking up scenarios", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
 
 	var outBytes []byte
@@ -74,10 +72,8 @@ func (p *listCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	_, err = p.writer.Write(outBytes)
 	if err != nil {
 		p.logger.Printf("%v\n  while writing list output", err)
-		return subcommands.ExitFailure
+		os.Exit(1)
 	}
-
-	return subcommands.ExitSuccess
 }
 
 func (p *listCmd) formatJson(entries []scenario.ScenarioEntry) []byte {
