@@ -29,6 +29,18 @@ or
 5) use your new scenario to modify a template  
   `manifer compose -l new-lib.yml -t base.yml -s use_case`
 
+# global flags and environment variables
+For convenience there are different ways to specify which libraries to read.
+In order of precedence:
+1) a local flag
+  `manifer list -l mylib.yml`
+2) a global flag
+  `manifer -l mylib.yml list`
+3) specific libraries via MANIFER_LIBS and the system path separator
+  `MANIFER_LIBS=mylib.yml:myotherlib.yml manifer list`
+4) directories to search via MANIFER_LIB_PATH and the system path separator
+  `MANIFER_LIB_PATH=./mylibs/:./sharedlibs manifer list`
+
 # subcommands
 ## import
 ```

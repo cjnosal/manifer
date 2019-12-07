@@ -4,6 +4,7 @@ import (
 	"github.com/cjnosal/manifer/test"
 	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"testing"
 )
@@ -691,6 +692,68 @@ scenarios:
 		if !cmp.Equal(outWriter.String(), expectedOut) {
 			t.Errorf("Expected Stdout:\n'''%v'''\nActual:\n'''%v'''\nDiff:\n'''%v'''\n",
 				expectedOut, outWriter.String(), cmp.Diff(expectedOut, outWriter.String()))
+		}
+	})
+
+	t.Run("TestLocalLibFlag", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"list",
+			"-l",
+			"../../test/data/library.yml",
+		)
+		writer := &test.StringWriter{}
+		cmd.Stdout = writer
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	})
+
+	t.Run("TestGlobalLibFlag", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"-l",
+			"../../test/data/library.yml",
+			"list",
+		)
+		writer := &test.StringWriter{}
+		cmd.Stdout = writer
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	})
+
+	t.Run("TestEnvLibs", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"list",
+		)
+		cmd.Env = append(os.Environ(), "MANIFER_LIBS=../../test/data/library.yml")
+		writer := &test.StringWriter{}
+		cmd.Stdout = writer
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	})
+
+	t.Run("TestEnvLibPath", func(t *testing.T) {
+		cmd := exec.Command(
+			"../../manifer",
+			"list",
+		)
+		cmd.Env = append(os.Environ(), "MANIFER_LIB_PATH=../../test/data")
+		writer := &test.StringWriter{}
+		cmd.Stdout = writer
+
+		err := cmd.Run()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
 		}
 	})
 }
