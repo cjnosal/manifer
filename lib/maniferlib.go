@@ -10,6 +10,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/importer"
+	"github.com/cjnosal/manifer/pkg/interpolator/bosh"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/pkg/processor"
@@ -301,11 +302,13 @@ func newComposer(logger io.Writer) composer.Composer {
 		Loader:          loader,
 		SnippetResolver: opsFileProcessor,
 	}
+	boshInterpolator := bosh.NewBoshInterpolator()
 	opsFileExecutor := &plan.InterpolationExecutor{
-		Processor: opsFileProcessor,
-		Diff:      diff,
-		Output:    logger,
-		File:      file,
+		Processor:    opsFileProcessor,
+		Interpolator: boshInterpolator,
+		Diff:         diff,
+		Output:       logger,
+		File:         file,
 	}
 	return &composer.ComposerImpl{
 		Resolver: resolver,

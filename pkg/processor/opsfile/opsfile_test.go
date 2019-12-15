@@ -29,7 +29,7 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 func TestParsePassthroughFlags(t *testing.T) {
 
 	t.Run("op files", func(t *testing.T) {
-		subject := processorWrapper{}
+		subject := opFileProcessor{}
 		flags := []string{"-ofoo", "-o", "bar", "--ops-file=bizz"}
 		node, err := subject.ParsePassthroughFlags(flags)
 
@@ -65,7 +65,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 	})
 
 	t.Run("set other flags as globals", func(t *testing.T) {
-		subject := processorWrapper{}
+		subject := opFileProcessor{}
 		flags := []string{"-ofoo", "-vbar"}
 		node, err := subject.ParsePassthroughFlags(flags)
 
@@ -93,7 +93,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 	})
 
 	t.Run("parse error", func(t *testing.T) {
-		subject := processorWrapper{}
+		subject := opFileProcessor{}
 		flags := []string{"-o"}
 		_, err := subject.ParsePassthroughFlags(flags)
 
@@ -175,93 +175,6 @@ func TestValidate(t *testing.T) {
 	})
 }
 
-func TestWrapper(t *testing.T) {
-	cases := []struct {
-		name             string
-		in               *file.TaggedBytes
-		snippet          *file.TaggedBytes
-		snippetArgs      []string
-		templateArgs     []string
-		intSnippetError  error
-		intTemplateError error
-		expectedError    error
-	}{
-		{
-			name:    "with snippet",
-			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
-			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
-			snippetArgs: []string{
-				"arg",
-			},
-			templateArgs: []string{
-				"another",
-			},
-		},
-		{
-			name: "no snippet",
-			in:   &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
-			templateArgs: []string{
-				"another",
-			},
-		},
-		{
-			name:    "snippet error",
-			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
-			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
-			snippetArgs: []string{
-				"arg",
-			},
-			intSnippetError: errors.New("test"),
-			expectedError:   errors.New("test\n  while trying to process snippet"),
-		},
-		{
-			name:    "template error",
-			in:      &file.TaggedBytes{Tag: "/template.yml", Bytes: []byte("foo: bar")},
-			snippet: &file.TaggedBytes{Tag: "/snippet.yml", Bytes: []byte("bizz: bazz")},
-			snippetArgs: []string{
-				"arg",
-			},
-			templateArgs: []string{
-				"another",
-			},
-			intTemplateError: errors.New("test"),
-			expectedError:    errors.New("test\n  while trying to process template"),
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockInt := NewMockopFileProcessor(ctrl)
-			subject := processorWrapper{
-				processor: mockInt,
-			}
-
-			var intSnippet *file.TaggedBytes
-			if c.snippet != nil {
-				intSnippet = &file.TaggedBytes{Tag: c.snippet.Tag, Bytes: []byte("processed: snippet")}
-				mockInt.EXPECT().process(c.snippet, nil, append(c.snippetArgs, c.templateArgs...)).Times(1).Return([]byte("processed: snippet"), c.intSnippetError)
-			}
-
-			expectedTemplate := []byte("processed: template")
-			if c.intSnippetError == nil {
-				mockInt.EXPECT().process(c.in, intSnippet, c.templateArgs).Times(1).Return(expectedTemplate, c.intTemplateError)
-			}
-
-			templateBytes, err := subject.ProcessTemplate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
-			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
-				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
-			}
-
-			if err == nil && !cmp.Equal(templateBytes, expectedTemplate) {
-				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\n", expectedTemplate, templateBytes)
-			}
-		})
-	}
-}
-
 func TestProcessTemplate(t *testing.T) {
 
 	validTemplate := "foo: bar\n\n"
@@ -270,24 +183,20 @@ func TestProcessTemplate(t *testing.T) {
 		name    string
 		in      *file.TaggedBytes
 		snippet *file.TaggedBytes
-		args    []string
 
 		opDefinitions []patch.OpDefinition
 
-		parseArgsError    error
 		parseSnippetError error
 
 		expectedError error
 		expectedOut   []byte
 	}{
 		{
-			name: "vars only",
-			in:   &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
-			args: []string{
-				"-v",
-				"bar=bar",
-			},
-			expectedOut: []byte("foo: bar\n"),
+			name:          "empty op",
+			in:            &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			snippet:       &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
+			opDefinitions: []patch.OpDefinition{},
+			expectedOut:   []byte("foo: bar\n\n"),
 		},
 		{
 			name:    "single op",
@@ -307,29 +216,6 @@ func TestProcessTemplate(t *testing.T) {
 				newOpDefinition("replace", "/bazz?", "buzz"),
 			},
 			expectedOut: []byte("bazz: buzz\nbizz: bazz\nfoo: bar\n"),
-		},
-		{
-			name:    "ignored passthrough ops",
-			in:      &file.TaggedBytes{Tag: "../../../test/data/template_with_var.yml", Bytes: []byte(validTemplate)},
-			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
-			opDefinitions: []patch.OpDefinition{
-				newOpDefinition("replace", "/bizz?", "bazz"),
-			},
-			args: []string{
-				"-v",
-				"bar=bar",
-				"-o",
-				"../../../test/data/opsfile_with_vars.yml",
-			},
-			expectedOut: []byte("bizz: bazz\nfoo: bar\n"),
-		},
-		{
-			name: "parse args error",
-			in:   &file.TaggedBytes{Tag: "template.yml", Bytes: []byte(validTemplate)},
-			args: []string{
-				"--invalid",
-			},
-			expectedError: errors.New("unknown flag `invalid'\n  while trying to parse args"),
 		},
 		{
 			name:              "parse snippet error",
@@ -370,17 +256,15 @@ func TestProcessTemplate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockYaml := yaml.NewMockYamlAccess(ctrl)
-			subject := ofInt{
-				Yaml: mockYaml,
-			}
+			mockFile := file.NewMockFileAccess(ctrl)
 
-			if c.snippet != nil {
-				mockYaml.EXPECT().Unmarshal(c.snippet.Bytes, &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
-					*o = c.opDefinitions
-				})
-			}
+			subject := NewOpsFileProcessor(mockYaml, mockFile)
 
-			templateBytes, err := subject.process(c.in, c.snippet, c.args)
+			mockYaml.EXPECT().Unmarshal(c.snippet.Bytes, &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
+				*o = c.opDefinitions
+			})
+
+			templateBytes, err := subject.ProcessTemplate(c.in, c.snippet)
 
 			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

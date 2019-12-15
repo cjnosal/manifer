@@ -6,38 +6,46 @@ import (
 
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/processor"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestStringDiff(t *testing.T) {
+func TestExecute(t *testing.T) {
 
 	t.Run("Show plan", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
 		mockProcessor := processor.NewMockProcessor(ctrl)
+		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:      mockDiff,
-			Processor: mockProcessor,
-			Output:    writer,
-			File:      mockFile,
+			Diff:         mockDiff,
+			Processor:    mockProcessor,
+			Interpolator: mockInterpolator,
+			Output:       writer,
+			File:         mockFile,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		processedIn := &file.TaggedBytes{Tag: "in", Bytes: []byte("bytes")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
-		mockProcessor.EXPECT().ProcessTemplate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return([]byte("bytes"), nil)
+		intSnippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("intSnippetBytes")}
+
+		mockInterpolator.EXPECT().Interpolate(snippet, []string{"snippet args", "global args"}).Times(1).Return([]byte("intSnippetBytes"), nil)
+		mockInterpolator.EXPECT().Interpolate(processedIn, []string{"global args"}).Times(1).Return([]byte("intTemplateBytes"), nil)
+		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet).Times(1).Return([]byte("bytes"), nil)
 		mockFile.EXPECT().ResolveRelativeFromWD("snippet").Times(1).Return("../snippet", nil)
 		bytes, err := subject.Execute(true, false, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
-		} else if !cmp.Equal(bytes, []byte("bytes")) {
+		} else if !cmp.Equal(bytes, []byte("intTemplateBytes")) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
@@ -48,56 +56,39 @@ func TestStringDiff(t *testing.T) {
 
 	})
 
-	t.Run("Interpolation error", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		mockDiff := diff.NewMockDiff(ctrl)
-		mockProcessor := processor.NewMockProcessor(ctrl)
-		writer := &test.StringWriter{}
-		defer ctrl.Finish()
-
-		subject := &InterpolationExecutor{
-			Diff:      mockDiff,
-			Processor: mockProcessor,
-			Output:    writer,
-		}
-
-		expectedError := errors.New("test")
-		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
-		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
-		mockProcessor.EXPECT().ProcessTemplate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return(nil, expectedError)
-
-		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
-
-		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
-			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
-		}
-
-	})
-
 	t.Run("Show diff", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
 		mockProcessor := processor.NewMockProcessor(ctrl)
+		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:      mockDiff,
-			Processor: mockProcessor,
-			Output:    writer,
+			Diff:         mockDiff,
+			Processor:    mockProcessor,
+			Interpolator: mockInterpolator,
+			Output:       writer,
+			File:         mockFile,
 		}
 
 		expectedDiff := "Diff:\ndiff"
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		processedIn := &file.TaggedBytes{Tag: "in", Bytes: []byte("bytes")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
-		mockProcessor.EXPECT().ProcessTemplate(in, snippet, []string{"snippet args"}, []string{"global args"}).Times(1).Return([]byte("bytes"), nil)
-		mockDiff.EXPECT().StringDiff("foo: bar", "bytes").Times(1).Return("diff")
+		intSnippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("intSnippetBytes")}
+
+		mockInterpolator.EXPECT().Interpolate(snippet, []string{"snippet args", "global args"}).Times(1).Return([]byte("intSnippetBytes"), nil)
+		mockInterpolator.EXPECT().Interpolate(processedIn, []string{"global args"}).Times(1).Return([]byte("intTemplateBytes"), nil)
+		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet).Times(1).Return([]byte("bytes"), nil)
+		mockDiff.EXPECT().StringDiff("foo: bar", "intTemplateBytes").Times(1).Return("diff")
 
 		bytes, err := subject.Execute(false, true, in, snippet, []string{"snippet args"}, []string{"global args"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
-		} else if !cmp.Equal(bytes, []byte("bytes")) {
+		} else if !cmp.Equal(bytes, []byte("intTemplateBytes")) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
@@ -107,4 +98,101 @@ func TestStringDiff(t *testing.T) {
 
 	})
 
+	t.Run("Interpolate snippet error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockDiff := diff.NewMockDiff(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
+		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		writer := &test.StringWriter{}
+		defer ctrl.Finish()
+
+		subject := &InterpolationExecutor{
+			Diff:         mockDiff,
+			Processor:    mockProcessor,
+			Interpolator: mockInterpolator,
+			Output:       writer,
+			File:         mockFile,
+		}
+
+		expectedError := errors.New("test\n  while trying to interpolate snippet")
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+
+		mockInterpolator.EXPECT().Interpolate(snippet, []string{"snippet args", "global args"}).Times(1).Return(nil, errors.New("test"))
+
+		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
+
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
+		}
+
+	})
+
+	t.Run("Process error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockDiff := diff.NewMockDiff(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
+		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		writer := &test.StringWriter{}
+		defer ctrl.Finish()
+
+		subject := &InterpolationExecutor{
+			Diff:         mockDiff,
+			Processor:    mockProcessor,
+			Interpolator: mockInterpolator,
+			Output:       writer,
+			File:         mockFile,
+		}
+
+		expectedError := errors.New("test\n  while trying to process template")
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+		intSnippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("intSnippetBytes")}
+
+		mockInterpolator.EXPECT().Interpolate(snippet, []string{"snippet args", "global args"}).Times(1).Return([]byte("intSnippetBytes"), nil)
+		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet).Times(1).Return(nil, errors.New("test"))
+
+		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
+
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
+		}
+
+	})
+
+	t.Run("Interpolate template error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockDiff := diff.NewMockDiff(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
+		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockFile := file.NewMockFileAccess(ctrl)
+		writer := &test.StringWriter{}
+		defer ctrl.Finish()
+
+		subject := &InterpolationExecutor{
+			Diff:         mockDiff,
+			Processor:    mockProcessor,
+			Interpolator: mockInterpolator,
+			Output:       writer,
+			File:         mockFile,
+		}
+
+		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
+		processedIn := &file.TaggedBytes{Tag: "in", Bytes: []byte("bytes")}
+		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
+		intSnippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("intSnippetBytes")}
+
+		mockInterpolator.EXPECT().Interpolate(snippet, []string{"snippet args", "global args"}).Times(1).Return([]byte("intSnippetBytes"), nil)
+		mockInterpolator.EXPECT().Interpolate(processedIn, []string{"global args"}).Times(1).Return(nil, errors.New("test"))
+		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet).Times(1).Return([]byte("bytes"), nil)
+
+		expectedError := errors.New("test\n  while trying to interpolate template")
+		_, err := subject.Execute(false, false, in, snippet, []string{"snippet args"}, []string{"global args"})
+
+		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
+		}
+	})
 }

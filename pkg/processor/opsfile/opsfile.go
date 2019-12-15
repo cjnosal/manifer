@@ -7,40 +7,26 @@ import (
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
 	"github.com/cjnosal/manifer/pkg/yaml"
-	boshopts "github.com/cloudfoundry/bosh-cli/cmd/opts"
 	boshtpl "github.com/cloudfoundry/bosh-cli/director/template"
 	"github.com/cppforlife/go-patch/patch"
 	"github.com/jessevdk/go-flags"
 )
 
 func NewOpsFileProcessor(y yaml.YamlAccess, f file.FileAccess) processor.Processor {
-	i := &ofInt{
-		Yaml: y,
-		File: f,
-	}
 	g := &opFileGenerator{
 		yaml: y,
 	}
-	return &processorWrapper{
-		processor: i,
+	return &opFileProcessor{
+		yaml:      y,
 		file:      f,
 		generator: g,
 	}
 }
 
-type processorWrapper struct {
-	processor opFileProcessor
+type opFileProcessor struct {
+	yaml      yaml.YamlAccess
 	file      file.FileAccess
 	generator *opFileGenerator
-}
-
-type ofInt struct {
-	Yaml yaml.YamlAccess
-	File file.FileAccess
-}
-
-type opFileProcessor interface {
-	process(template *file.TaggedBytes, snippet *file.TaggedBytes, args []string) ([]byte, error)
 }
 
 type opFlags struct {
@@ -48,17 +34,17 @@ type opFlags struct {
 	Oppaths []string `long:"ops-file" short:"o" value-name:"PATH" description:"Load manifest operations from a YAML file"`
 }
 
-func (i *processorWrapper) ValidateSnippet(path string) (bool, error) {
+func (i *opFileProcessor) ValidateSnippet(path string) (bool, error) {
 	content, err := i.file.Read(path)
 	if err != nil {
 		return false, fmt.Errorf("%w\n  while validating opsfile %s", err, path)
 	}
 	opDefs := []patch.OpDefinition{}
-	err = i.processor.(*ofInt).Yaml.Unmarshal(content, &opDefs)
+	err = i.yaml.Unmarshal(content, &opDefs)
 	return err == nil, nil
 }
 
-func (i *processorWrapper) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
+func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
 	var node *library.ScenarioNode
 	if len(args) > 0 {
 		opFlags := opFlags{}
@@ -86,68 +72,27 @@ func (i *processorWrapper) ParsePassthroughFlags(args []string) (*library.Scenar
 	return node, nil
 }
 
-func (i *processorWrapper) ProcessTemplate(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {
-
-	var intSnippet *file.TaggedBytes
-	if snippet != nil {
-		snippetBytes, err := i.processor.process(snippet, nil, append(snippetArgs, templateArgs...))
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to process snippet", err)
-		}
-		intSnippet = &file.TaggedBytes{
-			Bytes: snippetBytes,
-			Tag:   snippet.Tag,
-		}
-	}
-
-	templateBytes, err := i.processor.process(template, intSnippet, templateArgs)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to process template", err)
-	}
-
-	return templateBytes, nil
-}
-
-func (i *processorWrapper) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
-	return i.generator.generateSnippets(schema)
-}
-
-func (i *ofInt) process(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, args []string) ([]byte, error) {
-	template := boshtpl.NewTemplate(templateBytes.Bytes)
-
-	boshOpts := boshopts.InterpolateOpts{}
-
-	var vars boshtpl.Variables = boshtpl.StaticVariables{}
-	if len(args) > 0 {
-		_, err := flags.NewParser(&boshOpts, flags.None).ParseArgs(append(args, templateBytes.Tag)) // manifest path is a required flag in InterpolateOpts
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to parse args", err)
-		}
-		vars = boshOpts.VarFlags.AsVariables()
-	}
-
+func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes) ([]byte, error) {
 	opDefs := []patch.OpDefinition{}
 	ops := patch.Ops{}
-	if snippetBytes != nil {
-		err := i.Yaml.Unmarshal(snippetBytes.Bytes, &opDefs)
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to parse ops file %s", err, snippetBytes.Tag)
-		}
-
-		ops, err = patch.NewOpsFromDefinitions(opDefs)
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to create ops from definitions in %s", err, snippetBytes.Tag)
-		}
+	err := i.yaml.Unmarshal(snippetBytes.Bytes, &opDefs)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to parse ops file %s", err, snippetBytes.Tag)
 	}
+
+	ops, err = patch.NewOpsFromDefinitions(opDefs)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to create ops from definitions in %s", err, snippetBytes.Tag)
+	}
+
 	if len(ops) == 0 {
-		// add nil op so we can still process variables
-		ops = append(ops, nil)
+		return templateBytes.Bytes, nil
 	}
 
+	template := boshtpl.NewTemplate(templateBytes.Bytes)
 	var outBytes []byte
-	var err error
 	for i, op := range ops {
-		outBytes, err = template.Evaluate(vars, op, boshtpl.EvaluateOpts{})
+		outBytes, err = template.Evaluate(nil, op, boshtpl.EvaluateOpts{})
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to evaluate template %s with op %d from %s", err, templateBytes.Tag, i, snippetBytes.Tag)
 		}
@@ -155,4 +100,8 @@ func (i *ofInt) process(templateBytes *file.TaggedBytes, snippetBytes *file.Tagg
 	}
 
 	return outBytes, nil
+}
+
+func (i *opFileProcessor) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
+	return i.generator.generateSnippets(schema)
 }
