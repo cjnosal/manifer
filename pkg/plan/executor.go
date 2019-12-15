@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
+	"github.com/cjnosal/manifer/pkg/processor"
 	"io"
 )
 
@@ -13,10 +13,10 @@ type Executor interface {
 }
 
 type InterpolationExecutor struct {
-	Interpolator interpolator.Interpolator
-	Diff         diff.Diff
-	Output       io.Writer
-	File         file.FileAccess
+	Processor processor.Processor
+	Diff      diff.Diff
+	Output    io.Writer
+	File      file.FileAccess
 }
 
 func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {
@@ -36,7 +36,7 @@ func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *
 		out := fmt.Sprintf("\nSnippet %s; Arg %v; Global %v\n", relpath, snippetArgs, templateArgs)
 		i.Output.Write([]byte(out))
 	}
-	bytes, err := i.Interpolator.Interpolate(template, snippet, snippetArgs, templateArgs)
+	bytes, err := i.Processor.ProcessTemplate(template, snippet, snippetArgs, templateArgs)
 	if err != nil {
 		return nil, err
 	}

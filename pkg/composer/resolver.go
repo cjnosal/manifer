@@ -3,9 +3,9 @@ package composer
 import (
 	"fmt"
 
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/pkg/processor"
 )
 
 type ScenarioResolver interface {
@@ -14,7 +14,7 @@ type ScenarioResolver interface {
 
 type Resolver struct {
 	Loader          library.LibraryLoader
-	SnippetResolver interpolator.Interpolator
+	SnippetResolver processor.Processor
 }
 
 func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*plan.Plan, error) {

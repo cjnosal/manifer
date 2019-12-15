@@ -8,9 +8,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/pkg/processor"
 )
 
 func TestResolve(t *testing.T) {
@@ -189,16 +189,16 @@ func TestResolve(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockLoader := library.NewMockLibraryLoader(ctrl)
-			mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+			mockProcessor := processor.NewMockProcessor(ctrl)
 
 			mockLoader.EXPECT().Load(c.libraryPaths).Times(1).Return(c.expectedLibraries, c.yamlError)
 			if c.yamlError == nil {
-				mockInterpolator.EXPECT().ParsePassthroughFlags(c.passthrough).Times(1).Return(c.expectedNode, c.parseError)
+				mockProcessor.EXPECT().ParsePassthroughFlags(c.passthrough).Times(1).Return(c.expectedNode, c.parseError)
 			}
 
 			subject := Resolver{
 				Loader:          mockLoader,
-				SnippetResolver: mockInterpolator,
+				SnippetResolver: mockProcessor,
 			}
 
 			plan, err := subject.Resolve(c.libraryPaths, c.scenarioNames, c.passthrough)

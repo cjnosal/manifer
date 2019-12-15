@@ -3,8 +3,8 @@ package importer
 import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/pkg/processor"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,10 +16,10 @@ type Importer interface {
 
 type libraryImporter struct {
 	fileIO    file.FileAccess
-	validator interpolator.Interpolator
+	validator processor.Processor
 }
 
-func NewImporter(fileIO file.FileAccess, validator interpolator.Interpolator) Importer {
+func NewImporter(fileIO file.FileAccess, validator processor.Processor) Importer {
 	return &libraryImporter{
 		fileIO:    fileIO,
 		validator: validator,

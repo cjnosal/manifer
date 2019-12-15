@@ -10,10 +10,10 @@ import (
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/importer"
-	"github.com/cjnosal/manifer/pkg/interpolator"
-	"github.com/cjnosal/manifer/pkg/interpolator/opsfile"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/opsfile"
 	"github.com/cjnosal/manifer/pkg/scenario"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -23,15 +23,15 @@ import (
 func NewManifer(logger io.Writer) Manifer {
 	fileIO := &file.FileIO{}
 	yaml := &yaml.Yaml{}
-	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml, fileIO)
+	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, fileIO)
 	return &libImpl{
 		composer: newComposer(logger),
 		lister:   newLister(),
 		loader:   newLoader(),
 		file:     fileIO,
 		yaml:     yaml,
-		opInt:    opsFileInterpolator,
-		importer: importer.NewImporter(fileIO, opsFileInterpolator),
+		opInt:    opsFileProcessor,
+		importer: importer.NewImporter(fileIO, opsFileProcessor),
 	}
 }
 
@@ -71,7 +71,7 @@ type libImpl struct {
 	loader   *library.Loader
 	file     *file.FileIO
 	yaml     yaml.YamlAccess
-	opInt    interpolator.Interpolator
+	opInt    processor.Processor
 	importer importer.Importer
 }
 
@@ -296,16 +296,16 @@ func newComposer(logger io.Writer) composer.Composer {
 		File: file,
 		Yaml: yaml,
 	}
-	opsFileInterpolator := opsfile.NewOpsFileInterpolator(yaml, file)
+	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, file)
 	resolver := &composer.Resolver{
 		Loader:          loader,
-		SnippetResolver: opsFileInterpolator,
+		SnippetResolver: opsFileProcessor,
 	}
 	opsFileExecutor := &plan.InterpolationExecutor{
-		Interpolator: opsFileInterpolator,
-		Diff:         diff,
-		Output:       logger,
-		File:         file,
+		Processor: opsFileProcessor,
+		Diff:      diff,
+		Output:    logger,
+		File:      file,
 	}
 	return &composer.ComposerImpl{
 		Resolver: resolver,

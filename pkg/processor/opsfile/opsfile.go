@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/pkg/processor"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	boshopts "github.com/cloudfoundry/bosh-cli/cmd/opts"
 	boshtpl "github.com/cloudfoundry/bosh-cli/director/template"
@@ -13,7 +13,7 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func NewOpsFileInterpolator(y yaml.YamlAccess, f file.FileAccess) interpolator.Interpolator {
+func NewOpsFileProcessor(y yaml.YamlAccess, f file.FileAccess) processor.Processor {
 	i := &ofInt{
 		Yaml: y,
 		File: f,
@@ -21,17 +21,17 @@ func NewOpsFileInterpolator(y yaml.YamlAccess, f file.FileAccess) interpolator.I
 	g := &opFileGenerator{
 		yaml: y,
 	}
-	return &interpolatorWrapper{
-		interpolator: i,
-		file:         f,
-		generator:    g,
+	return &processorWrapper{
+		processor: i,
+		file:      f,
+		generator: g,
 	}
 }
 
-type interpolatorWrapper struct {
-	interpolator opFileInterpolator
-	file         file.FileAccess
-	generator    *opFileGenerator
+type processorWrapper struct {
+	processor opFileProcessor
+	file      file.FileAccess
+	generator *opFileGenerator
 }
 
 type ofInt struct {
@@ -39,8 +39,8 @@ type ofInt struct {
 	File file.FileAccess
 }
 
-type opFileInterpolator interface {
-	interpolate(template *file.TaggedBytes, snippet *file.TaggedBytes, args []string) ([]byte, error)
+type opFileProcessor interface {
+	process(template *file.TaggedBytes, snippet *file.TaggedBytes, args []string) ([]byte, error)
 }
 
 type opFlags struct {
@@ -48,17 +48,17 @@ type opFlags struct {
 	Oppaths []string `long:"ops-file" short:"o" value-name:"PATH" description:"Load manifest operations from a YAML file"`
 }
 
-func (i *interpolatorWrapper) ValidateSnippet(path string) (bool, error) {
+func (i *processorWrapper) ValidateSnippet(path string) (bool, error) {
 	content, err := i.file.Read(path)
 	if err != nil {
 		return false, fmt.Errorf("%w\n  while validating opsfile %s", err, path)
 	}
 	opDefs := []patch.OpDefinition{}
-	err = i.interpolator.(*ofInt).Yaml.Unmarshal(content, &opDefs)
+	err = i.processor.(*ofInt).Yaml.Unmarshal(content, &opDefs)
 	return err == nil, nil
 }
 
-func (i *interpolatorWrapper) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
+func (i *processorWrapper) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
 	var node *library.ScenarioNode
 	if len(args) > 0 {
 		opFlags := opFlags{}
@@ -86,13 +86,13 @@ func (i *interpolatorWrapper) ParsePassthroughFlags(args []string) (*library.Sce
 	return node, nil
 }
 
-func (i *interpolatorWrapper) Interpolate(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {
+func (i *processorWrapper) ProcessTemplate(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetArgs []string, templateArgs []string) ([]byte, error) {
 
 	var intSnippet *file.TaggedBytes
 	if snippet != nil {
-		snippetBytes, err := i.interpolator.interpolate(snippet, nil, append(snippetArgs, templateArgs...))
+		snippetBytes, err := i.processor.process(snippet, nil, append(snippetArgs, templateArgs...))
 		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to interpolate snippet", err)
+			return nil, fmt.Errorf("%w\n  while trying to process snippet", err)
 		}
 		intSnippet = &file.TaggedBytes{
 			Bytes: snippetBytes,
@@ -100,19 +100,19 @@ func (i *interpolatorWrapper) Interpolate(template *file.TaggedBytes, snippet *f
 		}
 	}
 
-	templateBytes, err := i.interpolator.interpolate(template, intSnippet, templateArgs)
+	templateBytes, err := i.processor.process(template, intSnippet, templateArgs)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to interpolate template", err)
+		return nil, fmt.Errorf("%w\n  while trying to process template", err)
 	}
 
 	return templateBytes, nil
 }
 
-func (i *interpolatorWrapper) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
+func (i *processorWrapper) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
 	return i.generator.generateSnippets(schema)
 }
 
-func (i *ofInt) interpolate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, args []string) ([]byte, error) {
+func (i *ofInt) process(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, args []string) ([]byte, error) {
 	template := boshtpl.NewTemplate(templateBytes.Bytes)
 
 	boshOpts := boshopts.InterpolateOpts{}
@@ -140,7 +140,7 @@ func (i *ofInt) interpolate(templateBytes *file.TaggedBytes, snippetBytes *file.
 		}
 	}
 	if len(ops) == 0 {
-		// add nil op so we can still interpolate variables
+		// add nil op so we can still process variables
 		ops = append(ops, nil)
 	}
 

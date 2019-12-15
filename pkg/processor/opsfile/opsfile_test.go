@@ -29,7 +29,7 @@ func newOpDefinition(t string, p string, i interface{}) patch.OpDefinition {
 func TestParsePassthroughFlags(t *testing.T) {
 
 	t.Run("op files", func(t *testing.T) {
-		subject := interpolatorWrapper{}
+		subject := processorWrapper{}
 		flags := []string{"-ofoo", "-o", "bar", "--ops-file=bizz"}
 		node, err := subject.ParsePassthroughFlags(flags)
 
@@ -65,7 +65,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 	})
 
 	t.Run("set other flags as globals", func(t *testing.T) {
-		subject := interpolatorWrapper{}
+		subject := processorWrapper{}
 		flags := []string{"-ofoo", "-vbar"}
 		node, err := subject.ParsePassthroughFlags(flags)
 
@@ -93,7 +93,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 	})
 
 	t.Run("parse error", func(t *testing.T) {
-		subject := interpolatorWrapper{}
+		subject := processorWrapper{}
 		flags := []string{"-o"}
 		_, err := subject.ParsePassthroughFlags(flags)
 
@@ -112,7 +112,7 @@ func TestValidate(t *testing.T) {
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 
-		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+		subject := NewOpsFileProcessor(mockYaml, mockFile)
 
 		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
 		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(nil)
@@ -135,7 +135,7 @@ func TestValidate(t *testing.T) {
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 
-		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+		subject := NewOpsFileProcessor(mockYaml, mockFile)
 
 		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
 		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(errors.New("oops"))
@@ -158,7 +158,7 @@ func TestValidate(t *testing.T) {
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 
-		subject := NewOpsFileInterpolator(mockYaml, mockFile)
+		subject := NewOpsFileProcessor(mockYaml, mockFile)
 
 		mockFile.EXPECT().Read("/foo").Times(1).Return(nil, errors.New("oops"))
 
@@ -212,7 +212,7 @@ func TestWrapper(t *testing.T) {
 				"arg",
 			},
 			intSnippetError: errors.New("test"),
-			expectedError:   errors.New("test\n  while trying to interpolate snippet"),
+			expectedError:   errors.New("test\n  while trying to process snippet"),
 		},
 		{
 			name:    "template error",
@@ -225,7 +225,7 @@ func TestWrapper(t *testing.T) {
 				"another",
 			},
 			intTemplateError: errors.New("test"),
-			expectedError:    errors.New("test\n  while trying to interpolate template"),
+			expectedError:    errors.New("test\n  while trying to process template"),
 		},
 	}
 	for _, c := range cases {
@@ -234,23 +234,23 @@ func TestWrapper(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockInt := NewMockopFileInterpolator(ctrl)
-			subject := interpolatorWrapper{
-				interpolator: mockInt,
+			mockInt := NewMockopFileProcessor(ctrl)
+			subject := processorWrapper{
+				processor: mockInt,
 			}
 
 			var intSnippet *file.TaggedBytes
 			if c.snippet != nil {
-				intSnippet = &file.TaggedBytes{Tag: c.snippet.Tag, Bytes: []byte("interpolated: snippet")}
-				mockInt.EXPECT().interpolate(c.snippet, nil, append(c.snippetArgs, c.templateArgs...)).Times(1).Return([]byte("interpolated: snippet"), c.intSnippetError)
+				intSnippet = &file.TaggedBytes{Tag: c.snippet.Tag, Bytes: []byte("processed: snippet")}
+				mockInt.EXPECT().process(c.snippet, nil, append(c.snippetArgs, c.templateArgs...)).Times(1).Return([]byte("processed: snippet"), c.intSnippetError)
 			}
 
-			expectedTemplate := []byte("interpolated: template")
+			expectedTemplate := []byte("processed: template")
 			if c.intSnippetError == nil {
-				mockInt.EXPECT().interpolate(c.in, intSnippet, c.templateArgs).Times(1).Return(expectedTemplate, c.intTemplateError)
+				mockInt.EXPECT().process(c.in, intSnippet, c.templateArgs).Times(1).Return(expectedTemplate, c.intTemplateError)
 			}
 
-			templateBytes, err := subject.Interpolate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
+			templateBytes, err := subject.ProcessTemplate(c.in, c.snippet, c.snippetArgs, c.templateArgs)
 			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)
 			}
@@ -262,7 +262,7 @@ func TestWrapper(t *testing.T) {
 	}
 }
 
-func TestInterpolate(t *testing.T) {
+func TestProcessTemplate(t *testing.T) {
 
 	validTemplate := "foo: bar\n\n"
 	invalidTemplate := ":::not yaml"
@@ -380,7 +380,7 @@ func TestInterpolate(t *testing.T) {
 				})
 			}
 
-			templateBytes, err := subject.interpolate(c.in, c.snippet, c.args)
+			templateBytes, err := subject.process(c.in, c.snippet, c.args)
 
 			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

@@ -12,8 +12,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/pkg/processor"
 )
 
 type TestFileInfo struct {
@@ -33,9 +33,9 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, errors.New("oops"))
 
@@ -51,12 +51,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("/in").Times(1).Return(false, errors.New("oops"))
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, errors.New("oops"))
 
 		expectedErr := errors.New("oops\n  validating file /in\n  importing file /in")
 		_, err := subject.Import(library.OpsFile, "/in", true, "/dir/out")
@@ -70,12 +70,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("/in").Times(1).Return(false, nil)
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, nil)
 
 		expectedLib := &library.Library{
 			Type:      library.OpsFile,
@@ -95,12 +95,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("", errors.New("oops"))
 
 		expectedErr := errors.New("oops\n  resolving relative path from /dir\n  importing file /in")
@@ -115,12 +115,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("../in", nil)
 
 		expectedLib := &library.Library{
@@ -151,9 +151,9 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Return(errors.New("oops"))
@@ -170,9 +170,9 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -191,9 +191,9 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -212,9 +212,9 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -232,12 +232,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("f").Times(1).Return(false, errors.New("oops"))
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(false, errors.New("oops"))
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", &TestFileInfo{dir: false}, nil)
 			expectedErr := errors.New("oops\n  validating file f\n  importing file f")
@@ -254,12 +254,12 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("f", "/dir").Times(1).Return("", errors.New("oops"))
 
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -278,14 +278,14 @@ func TestImport(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockInterpolator)
+		subject := NewImporter(mockFile, mockProcessor)
 
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("g").Times(1).Return(false, nil)
-		mockInterpolator.EXPECT().ValidateSnippet("h").Times(1).Return(true, nil)
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
+		mockProcessor.EXPECT().ValidateSnippet("g").Times(1).Return(false, nil)
+		mockProcessor.EXPECT().ValidateSnippet("h").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("f", "/dir").Times(1).Return("../f", nil)
 		mockFile.EXPECT().ResolveRelativeFrom("h", "/dir").Times(1).Return("../h", nil)
 
