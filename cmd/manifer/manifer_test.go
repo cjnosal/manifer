@@ -429,51 +429,33 @@ type: opsfile
 scenarios:
   - name: add_scenario
     description: imported from add_scenario.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/add_scenario.yml
-        args: []
     scenarios: []
   - name: add_snippet
     description: imported from add_snippet.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/scenario/add_snippet.yml
-        args: []
     scenarios: []
   - name: set_snippet
     description: imported from set_snippet.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/scenario/set_snippet.yml
-        args: []
     scenarios: []
   - name: add_arg
     description: imported from add_arg.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/scenario/snippet/add_arg.yml
-        args: []
     scenarios: []
   - name: set_scenario
     description: imported from set_scenario.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/set_scenario.yml
-        args: []
     scenarios: []
   - name: set_type
     description: imported from set_type.yml
-    global_args: []
-    args: []
     snippets:
       - path: generated_ops/set_type.yml
-        args: []
     scenarios: []
 `
 
@@ -523,11 +505,8 @@ type: opsfile
 scenarios:
   - name: opsfile
     description: imported from opsfile.yml
-    global_args: []
-    args: []
     snippets:
       - path: opsfile.yml
-        args: []
     scenarios: []
 `
 
@@ -578,35 +557,23 @@ type: opsfile
 scenarios:
   - name: empty_opsfile
     description: imported from empty_opsfile.yml
-    global_args: []
-    args: []
     snippets:
       - path: empty_opsfile.yml
-        args: []
     scenarios: []
   - name: opsfile
     description: imported from opsfile.yml
-    global_args: []
-    args: []
     snippets:
       - path: opsfile.yml
-        args: []
     scenarios: []
   - name: opsfile_with_vars
     description: imported from opsfile_with_vars.yml
-    global_args: []
-    args: []
     snippets:
       - path: opsfile_with_vars.yml
-        args: []
     scenarios: []
   - name: placeholder_opsfile
     description: imported from placeholder_opsfile.yml
-    global_args: []
-    args: []
     snippets:
       - path: placeholder_opsfile.yml
-        args: []
     scenarios: []
 `
 
@@ -674,22 +641,17 @@ type: opsfile
 scenarios:
   - name: dep
     description: ""
-    global_args: []
-    args: []
     snippets: []
     scenarios: []
   - name: new scenario
     description: scenario description
-    global_args: []
     args:
       - -v
       - value=foo
     snippets:
       - path: opsfile_with_vars.yml
-        args: []
     scenarios:
       - name: dep
-        args: []
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {
