@@ -3,6 +3,7 @@ package composer
 import (
 	"fmt"
 
+	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/pkg/processor"
@@ -15,6 +16,7 @@ type ScenarioResolver interface {
 type Resolver struct {
 	Loader          library.LibraryLoader
 	SnippetResolver processor.Processor
+	Interpolator    interpolator.Interpolator
 }
 
 func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*plan.Plan, error) {
@@ -37,6 +39,13 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthroug
 	}
 	if passthroughNode != nil {
 		nodes = append(nodes, passthroughNode)
+	}
+	passthroughVars, err := r.Interpolator.ParsePassthroughVars(passthrough)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to parse passthrough vars", err)
+	}
+	if passthroughVars != nil {
+		nodes = append(nodes, passthroughVars)
 	}
 	executionPlan := &plan.Plan{
 		Global: plan.ArgSet{

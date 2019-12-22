@@ -10,6 +10,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/diff"
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/importer"
+	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/interpolator/bosh"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
@@ -26,13 +27,14 @@ func NewManifer(logger io.Writer) Manifer {
 	yaml := &yaml.Yaml{}
 	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, fileIO)
 	return &libImpl{
-		composer: newComposer(logger),
-		lister:   newLister(),
-		loader:   newLoader(),
-		file:     fileIO,
-		yaml:     yaml,
-		opInt:    opsFileProcessor,
-		importer: importer.NewImporter(fileIO, opsFileProcessor),
+		composer:     newComposer(logger),
+		lister:       newLister(),
+		loader:       newLoader(),
+		file:         fileIO,
+		yaml:         yaml,
+		opProc:       opsFileProcessor,
+		importer:     importer.NewImporter(fileIO, opsFileProcessor),
+		interpolator: bosh.NewBoshInterpolator(),
 	}
 }
 
@@ -59,6 +61,8 @@ type Manifer interface {
 
 	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 
+	GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
+
 	Generate(libType library.Type, templatePath string, libPath string, snippetDir string) (*library.Library, error)
 
 	Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error)
@@ -67,13 +71,14 @@ type Manifer interface {
 }
 
 type libImpl struct {
-	composer composer.Composer
-	lister   scenario.ScenarioLister
-	loader   *library.Loader
-	file     *file.FileIO
-	yaml     yaml.YamlAccess
-	opInt    processor.Processor
-	importer importer.Importer
+	composer     composer.Composer
+	lister       scenario.ScenarioLister
+	loader       *library.Loader
+	file         *file.FileIO
+	yaml         yaml.YamlAccess
+	opProc       processor.Processor
+	importer     importer.Importer
+	interpolator interpolator.Interpolator
 }
 
 func (l *libImpl) Compose(
@@ -122,7 +127,11 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 }
 
 func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
-	return l.opInt.ParsePassthroughFlags(passthroughArgs)
+	return l.opProc.ParsePassthroughFlags(passthroughArgs)
+}
+
+func (l *libImpl) GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
+	return l.interpolator.ParsePassthroughVars(passthroughArgs)
 }
 
 func (l *libImpl) Generate(libType library.Type, templatePath string, libPath string, snippetDir string) (*library.Library, error) {
@@ -143,7 +152,7 @@ func (l *libImpl) Generate(libType library.Type, templatePath string, libPath st
 	if err != nil {
 		return nil, err
 	}
-	ops, err := l.opInt.GenerateSnippets(schemaBuilder.Root)
+	ops, err := l.opProc.GenerateSnippets(schemaBuilder.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -192,11 +201,17 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	if err != nil {
 		return nil, err
 	}
+	varnode, err := l.GetVarScenarioNode(passthrough)
+	if err != nil {
+		return nil, err
+	}
 	args := []string{}
 	snippets := []library.Snippet{}
 	if node != nil {
-		args = node.GlobalArgs // passthrough node treats all variables as global but library scenarios need appropriate scope
 		snippets = node.Snippets
+	}
+	if varnode != nil {
+		args = varnode.GlobalArgs // passthrough node treats all variables as global but library scenarios need appropriate scope
 	}
 
 	scenario := library.Scenario{
@@ -298,11 +313,12 @@ func newComposer(logger io.Writer) composer.Composer {
 		Yaml: yaml,
 	}
 	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, file)
+	boshInterpolator := bosh.NewBoshInterpolator()
 	resolver := &composer.Resolver{
 		Loader:          loader,
 		SnippetResolver: opsFileProcessor,
+		Interpolator:    boshInterpolator,
 	}
-	boshInterpolator := bosh.NewBoshInterpolator()
 	opsFileExecutor := &plan.InterpolationExecutor{
 		Processor:    opsFileProcessor,
 		Interpolator: boshInterpolator,

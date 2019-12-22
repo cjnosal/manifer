@@ -5,6 +5,7 @@ import (
 
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/interpolator"
+	"github.com/cjnosal/manifer/pkg/library"
 	boshopts "github.com/cloudfoundry/bosh-cli/cmd/opts"
 	boshtpl "github.com/cloudfoundry/bosh-cli/director/template"
 	"github.com/jessevdk/go-flags"
@@ -39,4 +40,47 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, args []s
 	}
 
 	return outBytes, nil
+}
+
+func (i *boshInterpolator) ParsePassthroughVars(args []string) (*library.ScenarioNode, error) {
+	var node *library.ScenarioNode
+	if len(args) > 0 {
+		varFlags := boshopts.VarFlags{}
+		remainder, err := flags.NewParser(&varFlags, flags.IgnoreUnknown).ParseArgs(args)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to parse args", err)
+		}
+		varsArgs := remove(args, remainder)
+		if len(varsArgs) > 0 {
+			node = &library.ScenarioNode{
+				Name:        "passthrough variables",
+				Description: "vars passed after --",
+				LibraryPath: "<cli>",
+				Type:        "",
+				GlobalArgs:  varsArgs,
+				RefArgs:     []string{},
+				Snippets:    []library.Snippet{},
+			}
+		}
+	}
+	return node, nil
+}
+
+func remove(source []string, discard []string) []string {
+	result := []string{}
+	for _, s := range source {
+		if !contains(discard, s) {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func contains(collection []string, value string) bool {
+	for _, c := range collection {
+		if c == value {
+			return true
+		}
+	}
+	return false
 }

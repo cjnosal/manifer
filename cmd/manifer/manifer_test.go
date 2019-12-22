@@ -310,13 +310,20 @@ dependencies:
 
 name:        passthrough (from <cli>)
 description: args passed after --
-global:  [-v=value=lastbit] (applied to all scenarios)
+global:  [] (applied to all scenarios)
 refargs: [] (applied to snippets and subscenarios)
 args:    [] (applied to snippets and subscenarios)
 snippets:
   ../../test/data/ops_file_with_vars.yml
   args: []
 
+dependencies:
+name:        passthrough variables (from <cli>)
+description: vars passed after --
+global:  [-v=value=lastbit] (applied to all scenarios)
+refargs: [] (applied to snippets and subscenarios)
+args:    [] (applied to snippets and subscenarios)
+snippets:
 dependencies:
 `
 			if !cmp.Equal(writer.String(), expected) {

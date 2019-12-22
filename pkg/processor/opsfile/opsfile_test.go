@@ -64,7 +64,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("set other flags as globals", func(t *testing.T) {
+	t.Run("ignore other flags", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-ofoo", "-vbar"}
 		node, err := subject.ParsePassthroughFlags(flags)
@@ -74,7 +74,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 
 		expectedNode := &library.ScenarioNode{
-			GlobalArgs:  []string{"-vbar"},
+			GlobalArgs:  []string{},
 			RefArgs:     []string{},
 			Name:        "passthrough",
 			Description: "args passed after --",
@@ -89,6 +89,21 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
+		}
+	})
+
+	t.Run("no snippets", func(t *testing.T) {
+		subject := opFileProcessor{}
+		flags := []string{"-vbar"}
+		node, err := subject.ParsePassthroughFlags(flags)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		var expectedNode *library.ScenarioNode
+		if !cmp.Equal(expectedNode, node) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedNode, node)
 		}
 	})
 

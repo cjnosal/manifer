@@ -48,25 +48,27 @@ func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.Scenari
 	var node *library.ScenarioNode
 	if len(args) > 0 {
 		opFlags := opFlags{}
-		remainder, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
+		_, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to parse opsfile args", err)
 		}
-		snippets := []library.Snippet{}
-		for _, o := range opFlags.Oppaths {
-			snippets = append(snippets, library.Snippet{
-				Path: o,
-				Args: []string{},
-			})
-		}
-		node = &library.ScenarioNode{
-			Name:        "passthrough",
-			Description: "args passed after --",
-			LibraryPath: "<cli>",
-			Type:        string(library.OpsFile),
-			GlobalArgs:  remainder,
-			RefArgs:     []string{},
-			Snippets:    snippets,
+		if len(opFlags.Oppaths) > 0 {
+			snippets := []library.Snippet{}
+			for _, o := range opFlags.Oppaths {
+				snippets = append(snippets, library.Snippet{
+					Path: o,
+					Args: []string{},
+				})
+			}
+			node = &library.ScenarioNode{
+				Name:        "passthrough",
+				Description: "args passed after --",
+				LibraryPath: "<cli>",
+				Type:        string(library.OpsFile),
+				GlobalArgs:  []string{},
+				RefArgs:     []string{},
+				Snippets:    snippets,
+			}
 		}
 	}
 	return node, nil
@@ -92,7 +94,7 @@ func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snipp
 	template := boshtpl.NewTemplate(templateBytes.Bytes)
 	var outBytes []byte
 	for i, op := range ops {
-		outBytes, err = template.Evaluate(nil, op, boshtpl.EvaluateOpts{})
+		outBytes, err = template.Evaluate(boshtpl.StaticVariables{}, op, boshtpl.EvaluateOpts{})
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to evaluate template %s with op %d from %s", err, templateBytes.Tag, i, snippetBytes.Tag)
 		}
