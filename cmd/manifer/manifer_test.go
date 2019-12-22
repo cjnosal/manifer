@@ -244,9 +244,7 @@ empty
 	t.Run("TestInspect", func(t *testing.T) {
 		t.Run("Plain Tree", func(t *testing.T) {
 			cmd := exec.Command(
-				"go",
-				"run",
-				"manifer.go",
+				"../../manifer",
 				"inspect",
 				"-l",
 				"../../test/data/ref_library.yml",
@@ -334,9 +332,7 @@ dependencies:
 
 		t.Run("Plain Plan", func(t *testing.T) {
 			cmd := exec.Command(
-				"go",
-				"run",
-				"manifer.go",
+				"../../manifer",
 				"inspect",
 				"-l",
 				"../../test/data/ref_library.yml",
