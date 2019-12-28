@@ -22,22 +22,21 @@ type LoadedLibrary struct {
 }
 
 type ScenarioNode struct {
-	Name         string
-	Description  string
-	LibraryPath  string
-	Type         string
-	GlobalArgs   []string
-	RefArgs      []string
-	Args         []string
-	Snippets     []Snippet
-	Dependencies []*ScenarioNode
+	Name               string
+	Description        string
+	LibraryPath        string
+	GlobalInterpolator InterpolatorParams
+	RefInterpolator    InterpolatorParams
+	Interpolator       InterpolatorParams
+	Snippets           []Snippet
+	Dependencies       []*ScenarioNode
 }
 
 func (l *LoadedLibrary) GetScenarioTree(name string) (*ScenarioNode, error) {
-	return l.getScenarioNode(name, []string{}, nil)
+	return l.getScenarioNode(name, InterpolatorParams{}, nil)
 }
 
-func (l *LoadedLibrary) getScenarioNode(name string, refArgs []string, parentLib *Library) (*ScenarioNode, error) {
+func (l *LoadedLibrary) getScenarioNode(name string, refInterpolator InterpolatorParams, parentLib *Library) (*ScenarioNode, error) {
 	var scenario *Scenario
 	var lib *Library
 	if parentLib != nil {
@@ -50,22 +49,21 @@ func (l *LoadedLibrary) getScenarioNode(name string, refArgs []string, parentLib
 	}
 	deps := []*ScenarioNode{}
 	for _, ref := range scenario.Scenarios {
-		node, err := l.getScenarioNode(ref.Name, ref.Args, lib)
+		node, err := l.getScenarioNode(ref.Name, ref.Interpolator, lib)
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while finding scenario %s", err, name)
 		}
 		deps = append(deps, node)
 	}
 	scenarioNode := &ScenarioNode{
-		Name:         scenario.Name,
-		Description:  scenario.Description,
-		LibraryPath:  l.GetPath(lib),
-		Type:         string(lib.Type),
-		GlobalArgs:   scenario.GlobalArgs,
-		RefArgs:      refArgs,
-		Args:         scenario.Args,
-		Snippets:     scenario.Snippets,
-		Dependencies: deps,
+		Name:               scenario.Name,
+		Description:        scenario.Description,
+		LibraryPath:        l.GetPath(lib),
+		GlobalInterpolator: scenario.GlobalInterpolator,
+		RefInterpolator:    refInterpolator,
+		Interpolator:       scenario.Interpolator,
+		Snippets:           scenario.Snippets,
+		Dependencies:       deps,
 	}
 	return scenarioNode, nil
 }

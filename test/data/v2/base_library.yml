@@ -1,0 +1,14 @@
+type: opsfile
+
+scenarios:
+- name: base
+  snippets:
+  - path: ./placeholder_opsfile.yml
+    interpolator:
+      vars:
+        path1: /base1?
+        value1: a
+        path2: /base2?
+        value2: b
+        path3: /base3?
+        value3: c

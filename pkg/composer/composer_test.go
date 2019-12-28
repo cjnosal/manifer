@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
 	"github.com/cjnosal/manifer/test"
 )
@@ -18,25 +19,25 @@ type interpolation struct {
 	in           *file.TaggedBytes
 	out          []byte
 	snippet      *file.TaggedBytes
-	snippetArgs  []string
-	templateArgs []string
+	snippetVars  []string
+	templateVars []string
 	err          error
 }
 
 func TestCompose(t *testing.T) {
 
 	planWithGlobals := &plan.Plan{
-		Global: plan.ArgSet{
-			Tag:  "global",
-			Args: []string{"global arg", "cli arg"},
+		Global: library.InterpolatorParams{
+			Vars:    map[string]interface{}{"global": "garg", "cli": "carg"},
+			RawArgs: []string{"-vfoo=bar"},
 		},
 		Steps: []*plan.Step{
 			{
 				Snippet: "/snippet",
-				Args: []plan.ArgSet{
+				Params: []plan.TaggedParams{
 					{
-						Tag:  "snippet",
-						Args: []string{"snippet args"},
+						Tag:    "snippet",
+						Params: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
 					},
 				},
 			},
@@ -44,17 +45,17 @@ func TestCompose(t *testing.T) {
 	}
 
 	planWithoutGlobals := &plan.Plan{
-		Global: plan.ArgSet{
-			Tag:  "global",
-			Args: []string{},
+		Global: library.InterpolatorParams{
+			Vars:    map[string]interface{}{},
+			RawArgs: []string{},
 		},
 		Steps: []*plan.Step{
 			{
 				Snippet: "/snippet",
-				Args: []plan.ArgSet{
+				Params: []plan.TaggedParams{
 					{
-						Tag:  "snippet",
-						Args: []string{"snippet args"},
+						Tag:    "snippet",
+						Params: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
 					},
 				},
 			},
@@ -117,7 +118,7 @@ func TestCompose(t *testing.T) {
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, nil).Times(1).Return(planWithoutGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
-		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithoutGlobals.Steps[0].FlattenArgs(), []string{}).Times(1).Return(expectedOut, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithoutGlobals.Steps[0].FlattenParams(), planWithoutGlobals.Global).Times(1).Return(expectedOut, nil)
 		out, err := subject.Compose(taggedTemplate, libraries, scenarioNames, nil, false, false)
 
 		if err != nil {
@@ -159,8 +160,8 @@ func TestCompose(t *testing.T) {
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
-		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenArgs(), planWithGlobals.Global.Args).Times(1).Return([]byte("transient"), nil)
-		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.Global.Args).Times(1).Return(expectedOut, nil)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenParams(), planWithGlobals.Global).Times(1).Return([]byte("transient"), nil)
+		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, library.InterpolatorParams{}, planWithGlobals.Global).Times(1).Return(expectedOut, nil)
 		out, err := subject.Compose(taggedTemplate, libraries, scenarioNames, passthrough, false, false)
 
 		if err != nil {
@@ -275,7 +276,7 @@ func TestCompose(t *testing.T) {
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
-		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenArgs(), planWithGlobals.Global.Args).Times(1).Return(nil, snippetError)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenParams(), planWithGlobals.Global).Times(1).Return(nil, snippetError)
 
 		_, err := subject.Compose(taggedTemplate, libraries, scenarioNames, passthrough, false, false)
 
@@ -310,12 +311,12 @@ func TestCompose(t *testing.T) {
 		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
 		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Steps[0].Snippet, Bytes: []byte("op")}
 		intError := errors.New("test")
-		expectedError := errors.New("test\n  while trying to apply passthrough args [global arg cli arg]")
+		expectedError := errors.New("test\n  while trying to apply globals {Vars:map[cli:carg global:garg] VarFiles:map[] VarsFiles:[] VarsEnv:[] VarsStore: RawArgs:[-vfoo=bar]}")
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
-		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenArgs(), planWithGlobals.Global.Args).Times(1).Return([]byte("transient"), nil)
-		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, planWithGlobals.Global.Args).Times(1).Return(nil, intError)
+		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, planWithGlobals.Steps[0].FlattenParams(), planWithGlobals.Global).Times(1).Return([]byte("transient"), nil)
+		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, library.InterpolatorParams{}, planWithGlobals.Global).Times(1).Return(nil, intError)
 
 		_, err := subject.Compose(taggedTemplate, libraries, scenarioNames, passthrough, false, false)
 

@@ -46,11 +46,12 @@ func TestResolve(t *testing.T) {
 						Scenarios: []library.Scenario{
 							{
 								Name: "a scenario",
-								Args: []string{},
 								Snippets: []library.Snippet{
 									{
 										Path: "/foo.yml",
-										Args: []string{"arg"},
+										Interpolator: library.InterpolatorParams{
+											Vars: map[string]interface{}{"arg": "value"},
+										},
 									},
 								},
 							},
@@ -59,21 +60,26 @@ func TestResolve(t *testing.T) {
 				},
 			},
 			expectedPlan: &plan.Plan{
-				Global: plan.ArgSet{
-					Tag:  "global",
-					Args: []string{},
+				Global: library.InterpolatorParams{
+					Vars:      map[string]interface{}{},
+					RawArgs:   []string{},
+					VarFiles:  map[string]string{},
+					VarsFiles: []string{},
+					VarsEnv:   []string{},
 				},
 				Steps: []*plan.Step{
 					{
 						Snippet: "/foo.yml",
-						Args: []plan.ArgSet{
+						Params: []plan.TaggedParams{
 							{
-								Tag:  "snippet",
-								Args: []string{"arg"},
+								Tag: "snippet",
+								Params: library.InterpolatorParams{
+									Vars: map[string]interface{}{"arg": "value"},
+								},
 							},
 							{
-								Tag:  "a scenario",
-								Args: []string{},
+								Tag:    "a scenario",
+								Params: library.InterpolatorParams{},
 							},
 						},
 					},
@@ -92,19 +98,20 @@ func TestResolve(t *testing.T) {
 				"-oextra=o",
 			},
 			expectedPassthroughNode: &library.ScenarioNode{
-				GlobalArgs: []string{},
 				Snippets: []library.Snippet{
 					{
 						Path: "/bar.yml",
-						Args: []string{"arg2"},
+						Interpolator: library.InterpolatorParams{
+							Vars: map[string]interface{}{"arg2": "value2"},
+						},
+						Processor: library.Processor{
+							Type: library.OpsFile,
+						},
 					},
 				},
 				Name:        "passthrough",
 				Description: "args passed after --",
 				LibraryPath: "<cli>",
-				Type:        string(library.OpsFile),
-				Args:        []string{},
-				RefArgs:     []string{},
 			},
 			expectedLibraries: &library.LoadedLibrary{
 				TopLibraries: []*library.Library{
@@ -112,11 +119,12 @@ func TestResolve(t *testing.T) {
 						Scenarios: []library.Scenario{
 							{
 								Name: "a scenario",
-								Args: []string{},
 								Snippets: []library.Snippet{
 									{
 										Path: "/foo.yml",
-										Args: []string{"arg"},
+										Interpolator: library.InterpolatorParams{
+											Vars: map[string]interface{}{"arg": "value"},
+										},
 									},
 								},
 							},
@@ -125,35 +133,45 @@ func TestResolve(t *testing.T) {
 				},
 			},
 			expectedPlan: &plan.Plan{
-				Global: plan.ArgSet{
-					Tag:  "global",
-					Args: []string{},
+				Global: library.InterpolatorParams{
+					Vars:      map[string]interface{}{},
+					RawArgs:   []string{},
+					VarFiles:  map[string]string{},
+					VarsFiles: []string{},
+					VarsEnv:   []string{},
 				},
 				Steps: []*plan.Step{
 					{
 						Snippet: "/foo.yml",
-						Args: []plan.ArgSet{
+						Params: []plan.TaggedParams{
 							{
-								Tag:  "snippet",
-								Args: []string{"arg"},
+								Tag: "snippet",
+								Params: library.InterpolatorParams{
+									Vars: map[string]interface{}{"arg": "value"},
+								},
 							},
 							{
-								Tag:  "a scenario",
-								Args: []string{},
+								Tag:    "a scenario",
+								Params: library.InterpolatorParams{},
 							},
 						},
 					},
 					{
 						Snippet: "/bar.yml",
-						Args: []plan.ArgSet{
+						Params: []plan.TaggedParams{
 							{
-								Tag:  "snippet",
-								Args: []string{"arg2"},
+								Tag: "snippet",
+								Params: library.InterpolatorParams{
+									Vars: map[string]interface{}{"arg2": "value2"},
+								},
 							},
 							{
-								Tag:  "passthrough",
-								Args: []string{},
+								Tag:    "passthrough",
+								Params: library.InterpolatorParams{},
 							},
+						},
+						Processor: library.Processor{
+							Type: library.OpsFile,
 						},
 					},
 				},
@@ -195,14 +213,13 @@ func TestResolve(t *testing.T) {
 				"-vextra=e",
 			},
 			expectedVarNode: &library.ScenarioNode{
-				GlobalArgs:  []string{"extra"},
+				GlobalInterpolator: library.InterpolatorParams{
+					RawArgs: []string{"-vextra=e"},
+				},
 				Snippets:    []library.Snippet{},
 				Name:        "passthrough variables",
 				Description: "vars passed after --",
 				LibraryPath: "<cli>",
-				Type:        "",
-				Args:        []string{},
-				RefArgs:     []string{},
 			},
 			expectedLibraries: &library.LoadedLibrary{
 				TopLibraries: []*library.Library{
@@ -210,11 +227,15 @@ func TestResolve(t *testing.T) {
 						Scenarios: []library.Scenario{
 							{
 								Name: "a scenario",
-								Args: []string{},
+								GlobalInterpolator: library.InterpolatorParams{
+									Vars: map[string]interface{}{"extra": "glob"},
+								},
 								Snippets: []library.Snippet{
 									{
 										Path: "/foo.yml",
-										Args: []string{"arg"},
+										Interpolator: library.InterpolatorParams{
+											Vars: map[string]interface{}{"arg": "value"},
+										},
 									},
 								},
 							},
@@ -223,21 +244,26 @@ func TestResolve(t *testing.T) {
 				},
 			},
 			expectedPlan: &plan.Plan{
-				Global: plan.ArgSet{
-					Tag:  "global",
-					Args: []string{"extra"},
+				Global: library.InterpolatorParams{
+					Vars:      map[string]interface{}{"extra": "glob"},
+					RawArgs:   []string{"-vextra=e"},
+					VarFiles:  map[string]string{},
+					VarsFiles: []string{},
+					VarsEnv:   []string{},
 				},
 				Steps: []*plan.Step{
 					{
 						Snippet: "/foo.yml",
-						Args: []plan.ArgSet{
+						Params: []plan.TaggedParams{
 							{
-								Tag:  "snippet",
-								Args: []string{"arg"},
+								Tag: "snippet",
+								Params: library.InterpolatorParams{
+									Vars: map[string]interface{}{"arg": "value"},
+								},
 							},
 							{
-								Tag:  "a scenario",
-								Args: []string{},
+								Tag:    "a scenario",
+								Params: library.InterpolatorParams{},
 							},
 						},
 					},

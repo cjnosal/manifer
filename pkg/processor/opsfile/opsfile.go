@@ -57,16 +57,15 @@ func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.Scenari
 			for _, o := range opFlags.Oppaths {
 				snippets = append(snippets, library.Snippet{
 					Path: o,
-					Args: []string{},
+					Processor: library.Processor{
+						Type: library.OpsFile,
+					},
 				})
 			}
 			node = &library.ScenarioNode{
 				Name:        "passthrough",
 				Description: "args passed after --",
 				LibraryPath: "<cli>",
-				Type:        string(library.OpsFile),
-				GlobalArgs:  []string{},
-				RefArgs:     []string{},
 				Snippets:    snippets,
 			}
 		}

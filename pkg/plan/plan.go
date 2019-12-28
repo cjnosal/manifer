@@ -5,68 +5,78 @@ import (
 )
 
 type Plan struct {
-	Global ArgSet
+	Global library.InterpolatorParams
 	Steps  []*Step
 }
 
 func Append(a *Plan, b *Plan) *Plan {
 	return &Plan{
-		Global: ArgSet{
-			Tag:  "global",
-			Args: append(a.Global.Args, b.Global.Args...),
-		},
-		Steps: append(a.Steps, b.Steps...),
+		Global: a.Global.Merge(b.Global),
+		Steps:  append(a.Steps, b.Steps...),
 	}
 }
 
 type Step struct {
-	Snippet string
-	Args    []ArgSet
+	Snippet   string
+	Params    []TaggedParams
+	Processor library.Processor
 }
 
-func (s *Step) FlattenArgs() []string {
-	args := []string{}
-	for _, set := range s.Args {
-		args = append(args, set.Args...)
+func (s *Step) FlattenParams() library.InterpolatorParams {
+	args := library.InterpolatorParams{
+		Vars:      map[string]interface{}{},
+		VarFiles:  map[string]string{},
+		VarsFiles: []string{},
+		VarsEnv:   []string{},
+		VarsStore: "",
+		RawArgs:   []string{},
+	}
+	for _, set := range s.Params {
+		args = args.Merge(set.Params)
 	}
 	return args
 }
 
-type ArgSet struct {
-	Tag  string
-	Args []string
+type TaggedParams struct {
+	Tag    string
+	Params library.InterpolatorParams
 }
 
 func FromScenarioTree(node *library.ScenarioNode) *Plan {
 	plan := &Plan{
-		Global: ArgSet{
-			Tag:  "global",
-			Args: []string{},
+		Global: library.InterpolatorParams{
+			Vars:      map[string]interface{}{},
+			VarFiles:  map[string]string{},
+			VarsFiles: []string{},
+			VarsEnv:   []string{},
+			VarsStore: "",
+			RawArgs:   []string{},
 		},
 		Steps: []*Step{},
 	}
-	fromNode(node, plan, []ArgSet{})
+	fromNode(node, plan, []TaggedParams{})
 	return plan
 }
 
-func fromNode(node *library.ScenarioNode, plan *Plan, inherited []ArgSet) {
-	scenarioArgs := ArgSet{
-		Tag:  node.Name,
-		Args: append(node.Args, node.RefArgs...),
+func fromNode(node *library.ScenarioNode, plan *Plan, inherited []TaggedParams) {
+	scenarioParams := TaggedParams{
+		Tag:    node.Name,
+		Params: node.Interpolator.Merge(node.RefInterpolator),
 	}
-	newArgSet := append([]ArgSet{scenarioArgs}, inherited...)
+	newTaggedParams := append([]TaggedParams{scenarioParams}, inherited...)
 	for _, dep := range node.Dependencies {
-		fromNode(dep, plan, newArgSet)
+		fromNode(dep, plan, newTaggedParams)
 	}
-	plan.Global.Args = append(plan.Global.Args, node.GlobalArgs...)
+	plan.Global = plan.Global.Merge(node.GlobalInterpolator)
 	for _, snippet := range node.Snippets {
-		snippetArgs := ArgSet{
-			Tag:  "snippet",
-			Args: snippet.Args,
+		snippetParams := TaggedParams{
+			Tag:    "snippet",
+			Params: snippet.Interpolator,
 		}
 		plan.Steps = append(plan.Steps, &Step{
-			Snippet: snippet.Path,
-			Args:    append([]ArgSet{snippetArgs}, newArgSet...),
+			Snippet:   snippet.Path,
+			Params:    append([]TaggedParams{snippetParams}, newTaggedParams...),
+			Processor: snippet.Processor,
 		})
 	}
 

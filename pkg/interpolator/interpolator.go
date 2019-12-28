@@ -6,6 +6,6 @@ import (
 )
 
 type Interpolator interface {
-	Interpolate(templateBytes *file.TaggedBytes, args []string) ([]byte, error)
+	Interpolate(templateBytes *file.TaggedBytes, params library.InterpolatorParams) ([]byte, error)
 	ParsePassthroughVars(args []string) (*library.ScenarioNode, error)
 }

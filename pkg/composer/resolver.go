@@ -48,9 +48,13 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthroug
 		nodes = append(nodes, passthroughVars)
 	}
 	executionPlan := &plan.Plan{
-		Global: plan.ArgSet{
-			Tag:  "global",
-			Args: []string{},
+		Global: library.InterpolatorParams{
+			Vars:      map[string]interface{}{},
+			VarFiles:  map[string]string{},
+			VarsFiles: []string{},
+			VarsEnv:   []string{},
+			VarsStore: "",
+			RawArgs:   []string{},
 		},
 		Steps: []*plan.Step{},
 	}

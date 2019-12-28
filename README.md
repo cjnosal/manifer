@@ -231,14 +231,14 @@ type: opsfile
 scenarios:
 - name: base-case
   description: helpful text displayed by `./manifer list`
-  args: # applied to all snippets in this scenario
-  - -v
-  - sub=nested
+  interpolator: # applied to all snippets in this scenario
+    vars:
+      sub: nested
   snippets: # opsfiles to apply, in order
   - path: ./base-case.yml
-    args: # applied to single snippet
-    - -v
-    - newbar=trendy
+    interpolator: # applied to single snippet
+      vars:
+        newbar: trendy
 ```
 
 e.g. mainlib.yml
@@ -251,12 +251,14 @@ scenarios:
 - name: my-use-case
   scenarios: # scenarios can reference other scenarios. The referenced scenario's snippets are applied first.
   - name: common.base-case # prefix library alias if scenario name is in referenced library
-    args: # arguments will be applied to all snippets in the referenced scenario
-    - -v
-    - e=f
-  global_args: # applied all snippets in all scenarios as well as the template
-  - -v
-  - bazz=123
+    interpolator: # variables will be applied to all snippets in the referenced scenario
+      vars:
+        e: f
+  global_interpolator: # applied all snippets in all scenarios as well as the template
+    vars:
+      bazz: 123
+    raw_args:
+      - -l=/tmp/vars.yml
 ```
 
 ## Invocation
@@ -269,16 +271,16 @@ foo:
     new: struct
 ```
 
-# interpolation and arguments
-There are four argument scopes:
-- snippet args
-- scenario args
-- scenario global args
-- CLI global args
+# interpolation and variables
+There are four variable scopes:
+- snippet vars
+- scenario vars
+- scenario global vars
+- CLI global vars
 
 Every snippet is used in two interpolations:
-- the snippet itself is interpolated with snippet args, scenario args, and global args
-- then the interpolated snippet is applied to the template, interpolated with global args
+- the snippet itself is interpolated with snippet vars, scenario vars, and global vars
+- then the interpolated snippet is applied to the template, interpolated with global vars
 
 # multiple libraries
 Libraries can include other libraries by specifying the path and an alias under 
@@ -314,16 +316,16 @@ func main() {
   manifer := lib.NewManifer(logger)
 
   // starting yaml file
-  template := "test/data/template.yml"
+  template := "test/data/v2/template.yml"
 
   // collection of scenarios
-  libraries := []string{"test/data/library.yml"}
+  libraries := []string{"test/data/v2/library.yml"}
 
   // sets of ops files to apply
   scenarios := []string{"placeholder"}
 
   // arguments to pass through to `bosh interpolate`
-  interpolationArgs := []string{"-vpath3=/foo", "-vvalue3=tweaks"}
+  interpolationVars := []string{"-vpath3=/foo", "-vvalue3=tweaks"}
 
   // list scenario names with descriptions
   scenarioSummary, err := manifer.ListScenarios(libraries, false)
@@ -331,7 +333,7 @@ func main() {
   logger.Write([]byte(fmt.Sprintf("%v\n", err)))
 
   // apply ops files from the selected scenarios to the provided template
-  composedYaml, err := manifer.Compose(template, libraries, scenarios, interpolationArgs, false, false)
+  composedYaml, err := manifer.Compose(template, libraries, scenarios, interpolationVars, false, false)
   output.Write(composedYaml)
   logger.Write([]byte(fmt.Sprintf("%v\n", err)))
 }

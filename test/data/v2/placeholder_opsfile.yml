@@ -1,0 +1,11 @@
+- type: replace
+  path: ((path1))
+  value: ((value1))
+
+- type: replace
+  path: ((path2))
+  value: ((value2))
+
+- type: replace
+  path: ((path3))
+  value: ((value3))

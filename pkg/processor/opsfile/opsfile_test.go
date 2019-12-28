@@ -38,24 +38,27 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 
 		expectedNode := &library.ScenarioNode{
-			GlobalArgs:  []string{},
-			RefArgs:     []string{},
 			Name:        "passthrough",
 			Description: "args passed after --",
 			LibraryPath: "<cli>",
-			Type:        string(library.OpsFile),
 			Snippets: []library.Snippet{
 				{
 					Path: "foo",
-					Args: []string{},
+					Processor: library.Processor{
+						Type: library.OpsFile,
+					},
 				},
 				{
 					Path: "bar",
-					Args: []string{},
+					Processor: library.Processor{
+						Type: library.OpsFile,
+					},
 				},
 				{
 					Path: "bizz",
-					Args: []string{},
+					Processor: library.Processor{
+						Type: library.OpsFile,
+					},
 				},
 			},
 		}
@@ -74,16 +77,15 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 
 		expectedNode := &library.ScenarioNode{
-			GlobalArgs:  []string{},
-			RefArgs:     []string{},
 			Name:        "passthrough",
 			Description: "args passed after --",
 			LibraryPath: "<cli>",
-			Type:        string(library.OpsFile),
 			Snippets: []library.Snippet{
 				{
 					Path: "foo",
-					Args: []string{},
+					Processor: library.Processor{
+						Type: library.OpsFile,
+					},
 				},
 			},
 		}
@@ -208,14 +210,14 @@ func TestProcessTemplate(t *testing.T) {
 	}{
 		{
 			name:          "empty op",
-			in:            &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			in:            &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
 			snippet:       &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{},
 			expectedOut:   []byte("foo: bar\n\n"),
 		},
 		{
 			name:    "single op",
-			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			in:      &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
 			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
@@ -224,7 +226,7 @@ func TestProcessTemplate(t *testing.T) {
 		},
 		{
 			name:    "multiple ops in file",
-			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			in:      &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
 			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte(validTemplate)},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("replace", "/bizz?", "bazz"),
@@ -234,14 +236,14 @@ func TestProcessTemplate(t *testing.T) {
 		},
 		{
 			name:              "parse snippet error",
-			in:                &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			in:                &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
 			parseSnippetError: errors.New("test"),
 			snippet:           &file.TaggedBytes{Tag: "/originalsnippet", Bytes: []byte(invalidTemplate)},
 			expectedError:     errors.New("test\n  while trying to parse ops file /originalsnippet"),
 		},
 		{
 			name:    "invalid snippet error",
-			in:      &file.TaggedBytes{Tag: "../../../test/data/template.yml", Bytes: []byte(validTemplate)},
+			in:      &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
 			snippet: &file.TaggedBytes{Tag: "opsfile.yml", Bytes: []byte("foo: bar")},
 			opDefinitions: []patch.OpDefinition{
 				newOpDefinition("", "", ""),

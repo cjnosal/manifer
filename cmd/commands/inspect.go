@@ -75,7 +75,7 @@ func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 		}
 		nodes = append(nodes, node)
 	}
-	passthroughNode, err := p.manifer.GetScenarioNode(args)
+	passthroughNode, err := p.manifer.GetSnippetScenarioNode(args)
 	if err != nil {
 		p.logger.Printf("%v\n  while trying to parse passthrough args", err)
 		os.Exit(1)
@@ -130,14 +130,14 @@ func (p *inspectCmd) formatJson(i interface{}) []byte {
 func (p *inspectCmd) formatPlainTree(node *library.ScenarioNode, builder *strings.Builder, indent string) {
 	builder.WriteString(fmt.Sprintf("%sname:        %s (from %s)\n", indent, node.Name, node.LibraryPath))
 	builder.WriteString(fmt.Sprintf("%sdescription: %s\n", indent, node.Description))
-	builder.WriteString(fmt.Sprintf("%sglobal:  %v (applied to all scenarios)\n", indent, node.GlobalArgs))
-	builder.WriteString(fmt.Sprintf("%srefargs: %v (applied to snippets and subscenarios)\n", indent, node.RefArgs))
-	builder.WriteString(fmt.Sprintf("%sargs:    %v (applied to snippets and subscenarios)\n", indent, node.Args))
+	builder.WriteString(fmt.Sprintf("%sglobal:  %+v (applied to all scenarios)\n", indent, node.GlobalInterpolator))
+	builder.WriteString(fmt.Sprintf("%srefvars: %+v (applied to snippets and subscenarios)\n", indent, node.RefInterpolator))
+	builder.WriteString(fmt.Sprintf("%svars:    %+v (applied to snippets and subscenarios)\n", indent, node.Interpolator))
 
 	builder.WriteString(fmt.Sprintf("%ssnippets:\n", indent))
 	for _, snippet := range node.Snippets {
 		builder.WriteString(fmt.Sprintf("%s  %s\n", indent, snippet.Path))
-		builder.WriteString(fmt.Sprintf("%s  args: %v\n", indent, snippet.Args))
+		builder.WriteString(fmt.Sprintf("%s  vars: %+v\n", indent, snippet.Interpolator))
 		builder.WriteString("\n")
 	}
 	builder.WriteString(fmt.Sprintf("%sdependencies:\n", indent))
@@ -149,12 +149,12 @@ func (p *inspectCmd) formatPlainTree(node *library.ScenarioNode, builder *string
 
 func (p *inspectCmd) formatPlainPlan(executionPlan *plan.Plan) []byte {
 	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("global: %v\n", executionPlan.Global.Args))
+	builder.WriteString(fmt.Sprintf("global: %+v\n", executionPlan.Global))
 	for _, step := range executionPlan.Steps {
 		builder.WriteString(fmt.Sprintf("- %s\n", step.Snippet))
-		builder.WriteString(fmt.Sprintf("  args:\n"))
-		for _, argSet := range step.Args {
-			builder.WriteString(fmt.Sprintf("    %s: %v\n", argSet.Tag, argSet.Args))
+		builder.WriteString(fmt.Sprintf("  vars:\n"))
+		for _, argSet := range step.Params {
+			builder.WriteString(fmt.Sprintf("    %s: %+v\n", argSet.Tag, argSet.Params))
 		}
 	}
 	return []byte(builder.String())

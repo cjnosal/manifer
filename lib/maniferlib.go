@@ -59,7 +59,7 @@ type Manifer interface {
 
 	GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error)
 
-	GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
+	GetSnippetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 
 	GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
 
@@ -126,7 +126,7 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 	return node, nil
 }
 
-func (l *libImpl) GetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
+func (l *libImpl) GetSnippetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
 	return l.opProc.ParsePassthroughFlags(passthroughArgs)
 }
 
@@ -192,12 +192,12 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 			return nil, err
 		}
 		refs = append(refs, library.ScenarioRef{
-			Name: dep,
-			Args: []string{},
+			Name:         dep,
+			Interpolator: library.InterpolatorParams{},
 		})
 	}
 
-	node, err := l.GetScenarioNode(passthrough)
+	node, err := l.GetSnippetScenarioNode(passthrough)
 	if err != nil {
 		return nil, err
 	}
@@ -205,22 +205,21 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	if err != nil {
 		return nil, err
 	}
-	args := []string{}
+	args := library.InterpolatorParams{}
 	snippets := []library.Snippet{}
 	if node != nil {
 		snippets = node.Snippets
 	}
 	if varnode != nil {
-		args = varnode.GlobalArgs // passthrough node treats all variables as global but library scenarios need appropriate scope
+		args = varnode.GlobalInterpolator
 	}
 
 	scenario := library.Scenario{
-		Name:        name,
-		Description: description,
-		GlobalArgs:  []string{},
-		Args:        args,
-		Snippets:    snippets,
-		Scenarios:   refs,
+		Name:         name,
+		Description:  description,
+		Interpolator: args, // passthrough node treats all variables as global but library scenarios need appropriate scope
+		Snippets:     snippets,
+		Scenarios:    refs,
 	}
 
 	lib.Scenarios = append(lib.Scenarios, scenario)

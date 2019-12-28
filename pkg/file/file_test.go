@@ -20,8 +20,8 @@ func TestResolveRelativeTo(t *testing.T) {
 	})
 	t.Run("relative to file", func(t *testing.T) {
 		subject := &FileIO{}
-		expected := "../../test/data/opsfile.yml"
-		actual, err := subject.ResolveRelativeTo("./opsfile.yml", "../../test/data/library.yml")
+		expected := "../../test/data/v2/opsfile.yml"
+		actual, err := subject.ResolveRelativeTo("./opsfile.yml", "../../test/data/v2/library.yml")
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -31,8 +31,8 @@ func TestResolveRelativeTo(t *testing.T) {
 	})
 	t.Run("relative to directory", func(t *testing.T) {
 		subject := &FileIO{}
-		expected := "../../test/data/opsfile.yml"
-		actual, err := subject.ResolveRelativeTo("./opsfile.yml", "../../test/data")
+		expected := "../../test/data/v2/opsfile.yml"
+		actual, err := subject.ResolveRelativeTo("./opsfile.yml", "../../test/data/v2")
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -58,8 +58,8 @@ func TestResolveRelativeFrom(t *testing.T) {
 	})
 	t.Run("relative to file", func(t *testing.T) {
 		subject := &FileIO{}
-		expected := "../../pkg/file/opsfile.yml"
-		actual, err := subject.ResolveRelativeFrom("./opsfile.yml", "../../test/data/library.yml")
+		expected := "../../../pkg/file/opsfile.yml"
+		actual, err := subject.ResolveRelativeFrom("./opsfile.yml", "../../test/data/v2/library.yml")
 		if err != nil {
 			t.Errorf(err.Error())
 		}

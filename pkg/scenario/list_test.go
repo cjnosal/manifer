@@ -31,26 +31,29 @@ func TestListScenarios(t *testing.T) {
 		Type: library.OpsFile,
 		Scenarios: []library.Scenario{
 			{
-				Name:       "dependency",
-				GlobalArgs: []string{"g2"},
-				Args:       []string{"a2"},
+				Name: "dependency",
+				GlobalInterpolator: library.InterpolatorParams{
+					Vars: map[string]interface{}{"g2": "g2"},
+				},
+				Interpolator: library.InterpolatorParams{
+					Vars: map[string]interface{}{"a2": "a2"},
+				},
 				Snippets: []library.Snippet{
 					{
 						Path: "/wd/lib/snippet2.yml",
-						Args: []string{"s2"},
+						Interpolator: library.InterpolatorParams{
+							Vars: map[string]interface{}{"s2": "s2"},
+						},
 					},
 				},
 			},
 			{
 				Name:        "big_dependency",
 				Description: "a bigger utility",
-				GlobalArgs:  []string{},
-				Args:        []string{},
 				Snippets:    []library.Snippet{},
 				Scenarios: []library.ScenarioRef{
 					{
 						Name: "dependency",
-						Args: []string{},
 					},
 				},
 			},
@@ -69,31 +72,36 @@ func TestListScenarios(t *testing.T) {
 			{
 				Name:        "main",
 				Description: "the default",
-				GlobalArgs:  []string{"g1"},
-				Args:        []string{"a1"},
+				GlobalInterpolator: library.InterpolatorParams{
+					Vars: map[string]interface{}{"g1": "g1"},
+				},
+				Interpolator: library.InterpolatorParams{
+					Vars: map[string]interface{}{"a1": "a1"},
+				},
 				Snippets: []library.Snippet{
 					{
 						Path: "/wd/lib/snippet1.yml",
-						Args: []string{"s1"},
+						Interpolator: library.InterpolatorParams{
+							Vars: map[string]interface{}{"s1": "s1"},
+						},
 					},
 				},
 				Scenarios: []library.ScenarioRef{
 					{
 						Name: "ref.dependency",
-						Args: []string{"r1"},
+						Interpolator: library.InterpolatorParams{
+							Vars: map[string]interface{}{"r1": "r1"},
+						},
 					},
 				},
 			},
 			{
 				Name:        "big",
 				Description: "include everything",
-				GlobalArgs:  []string{},
-				Args:        []string{},
 				Snippets:    []library.Snippet{},
 				Scenarios: []library.ScenarioRef{
 					{
 						Name: "ref.big_dependency",
-						Args: []string{},
 					},
 				},
 			},

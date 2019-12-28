@@ -1,0 +1,48 @@
+type: opsfile
+
+scenarios:
+- name: bizz
+  description: "adds an op"
+  snippets:
+  - path: ./opsfile.yml
+
+- name: empty
+  description: "contributes nothing"
+  snippets:
+  - path: ./empty_opsfile.yml
+
+- name: placeholder
+  description: "replaces placeholder values"
+  scenarios:
+  - name: basic
+    interpolator:
+      vars:
+        value2: basic_from_placeholder
+  interpolator:
+    vars:
+      path1: /fixed?
+      value1: from_scenario
+  snippets:
+  - path: ./placeholder_opsfile.yml
+    interpolator:
+      vars:
+        path2: /set?
+        value2: by_first
+  - path: ./placeholder_opsfile.yml
+    interpolator:
+      vars:
+        path2: /reused?
+        value2: by_second
+
+- name: basic
+  description: "a starting point"
+  interpolator:
+    vars:
+      path1: /base1?
+      value1: from_basic
+  snippets:
+  - path: ./placeholder_opsfile.yml
+    interpolator:
+      vars:
+        path2: /base2?
+        path3: /base3?

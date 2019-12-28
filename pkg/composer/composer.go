@@ -3,6 +3,7 @@ package composer
 import (
 	"fmt"
 	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
 )
 
@@ -38,14 +39,14 @@ func (c *ComposerImpl) Compose(
 	in := template
 	var out []byte
 
-	if len(plan.Steps) > 0 || len(plan.Global.Args) > 0 {
+	if len(plan.Steps) > 0 || !plan.Global.IsZero() {
 
 		for _, step := range plan.Steps {
 			taggedSnippet, err := c.File.ReadAndTag(step.Snippet)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, step.Snippet)
 			}
-			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, step.FlattenArgs(), plan.Global.Args)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, step.FlattenParams(), plan.Global)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, step.Snippet)
 			}
@@ -53,10 +54,10 @@ func (c *ComposerImpl) Compose(
 			in = &file.TaggedBytes{Tag: in.Tag, Bytes: out}
 		}
 
-		if len(plan.Global.Args) > 0 {
-			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, nil, plan.Global.Args)
+		if !plan.Global.IsZero() {
+			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, library.InterpolatorParams{}, plan.Global)
 			if err != nil {
-				return nil, fmt.Errorf("%w\n  while trying to apply passthrough args %v", err, plan.Global.Args)
+				return nil, fmt.Errorf("%w\n  while trying to apply globals %+v", err, plan.Global)
 			}
 		}
 	} else {

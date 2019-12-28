@@ -17,24 +17,79 @@ func NewBoshInterpolator() interpolator.Interpolator {
 
 type boshInterpolator struct{}
 
-func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, args []string) ([]byte, error) {
-	if len(args) == 0 {
+func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params library.InterpolatorParams) ([]byte, error) {
+	if params.IsZero() {
 		return templateBytes.Bytes, nil
 	}
 
+	libKVs := []boshtpl.VarKV{}
+	for k, v := range params.Vars {
+		libKVs = append(libKVs, boshtpl.VarKV{
+			Name:  k,
+			Value: v,
+		})
+	}
+	libVarFiles := []boshtpl.VarFileArg{}
+	for v, p := range params.VarFiles {
+		f := &boshtpl.VarFileArg{}
+		err := f.UnmarshalFlag(fmt.Sprintf("%s=%s", v, p))
+		if err != nil {
+			return nil, err
+		}
+		libVarFiles = append(libVarFiles, *f)
+	}
+	libVarsFiles := []boshtpl.VarsFileArg{}
+	for _, p := range params.VarsFiles {
+		f := &boshtpl.VarsFileArg{}
+		err := f.UnmarshalFlag(p)
+		if err != nil {
+			return nil, err
+		}
+		libVarsFiles = append(libVarsFiles, *f)
+	}
+	libVarsEnv := []boshtpl.VarsEnvArg{}
+	for _, p := range params.VarsEnv {
+		e := &boshtpl.VarsEnvArg{}
+		err := e.UnmarshalFlag(p)
+		if err != nil {
+			return nil, err
+		}
+		libVarsEnv = append(libVarsEnv, *e)
+	}
+	libStore := &boshopts.VarsFSStore{}
+	if params.VarsStore != "" {
+		err := libStore.UnmarshalFlag(params.VarsStore)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	libVarFlags := boshopts.VarFlags{
+		VarKVs:      libKVs,
+		VarFiles:    libVarFiles,
+		VarsFiles:   libVarsFiles,
+		VarsEnvs:    libVarsEnv,
+		VarsFSStore: *libStore,
+	}
+	passthroughVarFlags := boshopts.VarFlags{}
+	_, err := flags.NewParser(&passthroughVarFlags, flags.None).ParseArgs(params.RawArgs)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to parse vars", err)
+	}
+
+	libVarFlags.VarKVs = append(libVarFlags.VarKVs, passthroughVarFlags.VarKVs...)
+	libVarFlags.VarFiles = append(libVarFlags.VarFiles, passthroughVarFlags.VarFiles...)
+	libVarFlags.VarsFiles = append(libVarFlags.VarsFiles, passthroughVarFlags.VarsFiles...)
+	libVarFlags.VarsEnvs = append(libVarFlags.VarsEnvs, passthroughVarFlags.VarsEnvs...)
+	if passthroughVarFlags.VarsFSStore.IsSet() {
+		libVarFlags.VarsFSStore = passthroughVarFlags.VarsFSStore
+	}
+
+	boshVars := libVarFlags.AsVariables()
+
 	template := boshtpl.NewTemplate(templateBytes.Bytes)
 
-	boshOpts := boshopts.InterpolateOpts{}
-
-	var vars boshtpl.Variables = boshtpl.StaticVariables{}
-	_, err := flags.NewParser(&boshOpts, flags.None).ParseArgs(append(args, templateBytes.Tag)) // manifest path is a required flag in InterpolateOpts
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to parse args", err)
-	}
-	vars = boshOpts.VarFlags.AsVariables()
-
-	var outBytes []byte
-	outBytes, err = template.Evaluate(vars, nil, boshtpl.EvaluateOpts{})
+	outBytes, err := template.Evaluate(boshVars, nil, boshtpl.EvaluateOpts{})
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  while trying to evaluate template %s", err, templateBytes.Tag)
 	}
@@ -48,18 +103,19 @@ func (i *boshInterpolator) ParsePassthroughVars(args []string) (*library.Scenari
 		varFlags := boshopts.VarFlags{}
 		remainder, err := flags.NewParser(&varFlags, flags.IgnoreUnknown).ParseArgs(args)
 		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to parse args", err)
+			return nil, fmt.Errorf("%w\n  while trying to parse vars", err)
 		}
 		varsArgs := remove(args, remainder)
-		if len(varsArgs) > 0 {
+		params := library.InterpolatorParams{
+			RawArgs: varsArgs,
+		}
+
+		if !params.IsZero() {
 			node = &library.ScenarioNode{
-				Name:        "passthrough variables",
-				Description: "vars passed after --",
-				LibraryPath: "<cli>",
-				Type:        "",
-				GlobalArgs:  varsArgs,
-				RefArgs:     []string{},
-				Snippets:    []library.Snippet{},
+				Name:               "passthrough variables",
+				Description:        "vars passed after --",
+				LibraryPath:        "<cli>",
+				GlobalInterpolator: params,
 			}
 		}
 	}
