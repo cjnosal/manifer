@@ -9,6 +9,6 @@ import (
 type Processor interface {
 	ValidateSnippet(path string) (bool, error)
 	ParsePassthroughFlags(templateVars []string) (*library.ScenarioNode, error)
-	ProcessTemplate(template *file.TaggedBytes, snippet *file.TaggedBytes) ([]byte, error)
+	ProcessTemplate(template *file.TaggedBytes, snippet *file.TaggedBytes, options map[string]interface{}) ([]byte, error)
 	GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error)
 }

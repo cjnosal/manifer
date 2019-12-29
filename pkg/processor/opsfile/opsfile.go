@@ -32,6 +32,9 @@ type opFileProcessor struct {
 type opFlags struct {
 	// flag string copied from bosh cli ops_flag.go
 	Oppaths []string `long:"ops-file" short:"o" value-name:"PATH" description:"Load manifest operations from a YAML file"`
+
+	// from bosh cli opts.go
+	Path string `long:"path" value-name:"OP-PATH" description:"Extract value out of template (e.g.: /private_key)"`
 }
 
 func (i *opFileProcessor) ValidateSnippet(path string) (bool, error) {
@@ -52,13 +55,24 @@ func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.Scenari
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to parse opsfile args", err)
 		}
-		if len(opFlags.Oppaths) > 0 {
+		if len(opFlags.Oppaths) > 0 || opFlags.Path != "" {
 			snippets := []library.Snippet{}
 			for _, o := range opFlags.Oppaths {
 				snippets = append(snippets, library.Snippet{
 					Path: o,
 					Processor: library.Processor{
+						Type:    library.OpsFile,
+						Options: map[string]interface{}{},
+					},
+				})
+			}
+			if opFlags.Path != "" {
+				snippets = append(snippets, library.Snippet{
+					Processor: library.Processor{
 						Type: library.OpsFile,
+						Options: map[string]interface{}{
+							"path": opFlags.Path,
+						},
 					},
 				})
 			}
@@ -73,29 +87,53 @@ func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.Scenari
 	return node, nil
 }
 
-func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes) ([]byte, error) {
-	opDefs := []patch.OpDefinition{}
+func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, options map[string]interface{}) ([]byte, error) {
+
 	ops := patch.Ops{}
-	err := i.yaml.Unmarshal(snippetBytes.Bytes, &opDefs)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to parse ops file %s", err, snippetBytes.Tag)
+	if snippetBytes != nil {
+		opDefs := []patch.OpDefinition{}
+		err := i.yaml.Unmarshal(snippetBytes.Bytes, &opDefs)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to parse ops file %s", err, snippetBytes.Tag)
+		}
+
+		ops, err = patch.NewOpsFromDefinitions(opDefs)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to create ops from definitions in %s", err, snippetBytes.Tag)
+		}
 	}
 
-	ops, err = patch.NewOpsFromDefinitions(opDefs)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to create ops from definitions in %s", err, snippetBytes.Tag)
+	var findPath string
+	if options != nil {
+		findPath = options["path"].(string)
 	}
 
-	if len(ops) == 0 {
+	if len(ops) == 0 && findPath == "" {
 		return templateBytes.Bytes, nil
 	}
 
 	template := boshtpl.NewTemplate(templateBytes.Bytes)
 	var outBytes []byte
+	var err error
 	for i, op := range ops {
 		outBytes, err = template.Evaluate(boshtpl.StaticVariables{}, op, boshtpl.EvaluateOpts{})
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to evaluate template %s with op %d from %s", err, templateBytes.Tag, i, snippetBytes.Tag)
+		}
+		template = boshtpl.NewTemplate(outBytes)
+	}
+	if findPath != "" {
+		pointer, err := patch.NewPointerFromString(findPath)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to parse path %s in template %s", err, findPath, templateBytes.Tag)
+		}
+		evaluateOpts := boshtpl.EvaluateOpts{
+			PostVarSubstitutionOp: patch.FindOp{Path: pointer},
+			UnescapedMultiline:    true,
+		}
+		outBytes, err = template.Evaluate(boshtpl.StaticVariables{}, nil, evaluateOpts)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to find path %s in template %s", err, findPath, templateBytes.Tag)
 		}
 		template = boshtpl.NewTemplate(outBytes)
 	}

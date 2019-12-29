@@ -45,19 +45,52 @@ func TestParsePassthroughFlags(t *testing.T) {
 				{
 					Path: "foo",
 					Processor: library.Processor{
-						Type: library.OpsFile,
+						Type:    library.OpsFile,
+						Options: map[string]interface{}{},
 					},
 				},
 				{
 					Path: "bar",
 					Processor: library.Processor{
-						Type: library.OpsFile,
+						Type:    library.OpsFile,
+						Options: map[string]interface{}{},
 					},
 				},
 				{
 					Path: "bizz",
 					Processor: library.Processor{
+						Type:    library.OpsFile,
+						Options: map[string]interface{}{},
+					},
+				},
+			},
+		}
+		if !cmp.Equal(*expectedNode, *node) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
+		}
+	})
+
+	t.Run("find path", func(t *testing.T) {
+		subject := opFileProcessor{}
+		flags := []string{"--path", "/foo/bar"}
+		node, err := subject.ParsePassthroughFlags(flags)
+
+		if err != nil {
+			t.Errorf("Unexpected error %v", err)
+		}
+
+		expectedNode := &library.ScenarioNode{
+			Name:        "passthrough",
+			Description: "args passed after --",
+			LibraryPath: "<cli>",
+			Snippets: []library.Snippet{
+				{
+					Path: "",
+					Processor: library.Processor{
 						Type: library.OpsFile,
+						Options: map[string]interface{}{
+							"path": "/foo/bar",
+						},
 					},
 				},
 			},
@@ -84,7 +117,8 @@ func TestParsePassthroughFlags(t *testing.T) {
 				{
 					Path: "foo",
 					Processor: library.Processor{
-						Type: library.OpsFile,
+						Type:    library.OpsFile,
+						Options: map[string]interface{}{},
 					},
 				},
 			},
@@ -94,7 +128,7 @@ func TestParsePassthroughFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("no snippets", func(t *testing.T) {
+	t.Run("no snippets or path", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-vbar"}
 		node, err := subject.ParsePassthroughFlags(flags)
@@ -201,7 +235,8 @@ func TestProcessTemplate(t *testing.T) {
 		in      *file.TaggedBytes
 		snippet *file.TaggedBytes
 
-		opDefinitions []patch.OpDefinition
+		opDefinitions    []patch.OpDefinition
+		processorOptions map[string]interface{}
 
 		parseSnippetError error
 
@@ -264,6 +299,30 @@ func TestProcessTemplate(t *testing.T) {
 			},
 			expectedError: errors.New("Expected to find a map at path '/bizz?' but found 'string'\n  while trying to evaluate template invalid.yml with op 0 from opsfile.yml"),
 		},
+		{
+			name:             "find path",
+			in:               &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
+			snippet:          nil,
+			opDefinitions:    []patch.OpDefinition{},
+			processorOptions: map[string]interface{}{"path": "/foo"},
+			expectedOut:      []byte("bar\n"),
+		},
+		{
+			name:             "malformed find path",
+			in:               &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
+			snippet:          nil,
+			opDefinitions:    []patch.OpDefinition{},
+			processorOptions: map[string]interface{}{"path": "noslash"},
+			expectedError:    errors.New("Expected to start with '/'\n  while trying to parse path noslash in template ../../../test/data/v2/template.yml"),
+		},
+		{
+			name:             "missing find path",
+			in:               &file.TaggedBytes{Tag: "../../../test/data/v2/template.yml", Bytes: []byte(validTemplate)},
+			snippet:          nil,
+			opDefinitions:    []patch.OpDefinition{},
+			processorOptions: map[string]interface{}{"path": "/nothing/there"},
+			expectedError:    errors.New("Expected to find a map key 'nothing' for path '/nothing' (found map keys: 'foo')\n  while trying to find path /nothing/there in template ../../../test/data/v2/template.yml"),
+		},
 	}
 
 	for _, c := range cases {
@@ -277,11 +336,13 @@ func TestProcessTemplate(t *testing.T) {
 
 			subject := NewOpsFileProcessor(mockYaml, mockFile)
 
-			mockYaml.EXPECT().Unmarshal(c.snippet.Bytes, &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
-				*o = c.opDefinitions
-			})
+			if c.snippet != nil {
+				mockYaml.EXPECT().Unmarshal(c.snippet.Bytes, &[]patch.OpDefinition{}).Times(1).Return(c.parseSnippetError).Do(func(bytes []byte, o *[]patch.OpDefinition) {
+					*o = c.opDefinitions
+				})
+			}
 
-			templateBytes, err := subject.ProcessTemplate(c.in, c.snippet)
+			templateBytes, err := subject.ProcessTemplate(c.in, c.snippet, c.processorOptions)
 
 			if !cmp.Equal(&c.expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 				t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", c.expectedError, err)

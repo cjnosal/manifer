@@ -42,11 +42,14 @@ func (c *ComposerImpl) Compose(
 	if len(plan.Steps) > 0 || !plan.Global.IsZero() {
 
 		for _, step := range plan.Steps {
-			taggedSnippet, err := c.File.ReadAndTag(step.Snippet)
-			if err != nil {
-				return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, step.Snippet)
+			var taggedSnippet *file.TaggedBytes
+			if step.Snippet != "" {
+				taggedSnippet, err = c.File.ReadAndTag(step.Snippet)
+				if err != nil {
+					return nil, fmt.Errorf("%w\n  while trying to load snippet %s", err, step.Snippet)
+				}
 			}
-			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, step.FlattenParams(), plan.Global)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, taggedSnippet, &step.Processor, step.FlattenParams(), plan.Global)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply snippet %s", err, step.Snippet)
 			}
@@ -55,7 +58,7 @@ func (c *ComposerImpl) Compose(
 		}
 
 		if !plan.Global.IsZero() {
-			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, library.InterpolatorParams{}, plan.Global)
+			out, err = c.Executor.Execute(showPlan, showDiff, in, nil, nil, library.InterpolatorParams{}, plan.Global)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while trying to apply globals %+v", err, plan.Global)
 			}

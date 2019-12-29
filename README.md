@@ -222,43 +222,79 @@ e.g. base-case.yml
 ## library
 [library.go](https://github.com/cjnosal/manifer/blob/master/pkg/library/library.go)
 
-Opsfiles can be grouped into scenarios, a named set that will be applied in order with associated variables to the template.
-Scenarios are defined in a library file.
+Library files are used to organize sets of snippets, interpolation variables, and processor options
+to allow easy dynamic composition of large yaml files.  
 
-e.g. commonlib.yml
+Libraries consist of:  
+- a default processor type for all snippets  
+  `type: opsfile`  
+- aliases to other libraries  
+  ```
+  libraries:
+  - alias: common
+    path: ./commonlib.yml
+  ```
+- a list of scenarios, consisting of:  
+  - a unique name  
+  - a user-friendly description  
+  - references to other scenarios this scenario depends on:  
+    - by name, prefixed with `.` delimited library aliases  
+    - interpolator variables to apply to the referenced scenario  
+  - snippets to transform the template yaml:  
+    - path to the snippet file  
+    - interpolator variables for this snippet  
+    - processor options for this snippet  
+  - interpolator variables to use with all snippets in this scenario and referenced scenarios  
+  - global interpolator variables to use with all snippets in this composition  
+  ```
+  scenarios:
+  - name: first
+    description: my first scenario
+    scenarios:
+    - name: second
+      interpolator:
+        vars:
+          foo: bar
+    - name: common.setup
+    snippets:
+    - path: ./opsfile.yml
+      interpolator:
+        vars:
+          bizz: bazz
+      processor:
+        type: opsfile
+        options:
+          path: /buzz
+  - name: second
+    snippets:
+    - path: ./secondop.yml
+    - path: ./thirdop.yml
+    global_interpolator:
+      vars_store: ./generated.yml
+  ```
+  
+### interpolator variables
+Variables can be defined by adding an `interpolator` block to a snippet, scenario reference, scenario, or via passthrough flags from the CLI
+```
+interpolator:
+  vars: {} # map variable names to static values [--var=key=val (-v)]
+  var_files: {} # map variable names to files that contain the value [--var-file=key=path]
+  vars_files: [] # file paths that contain a map of variable names to static values [--vars-file=path (-l)]
+  vars_env: [] # environment variables with the given prefixes [--vars-env=prefix]
+  vars_store: "" # a vars-file that can lazily generate random passwords or certificates [--vars-store=path]
+  raw_args: [] # insert CLI flags into the scenario definition (for internal use)
+```
+
+See [bosh interpolate](https://bosh.io/docs/cli-int/) and [variable types](https://bosh.io/docs/variable-types/) for more details
+
+### processor options
+A snippet can override the libraries processor type, or provide options
+
+#### opsfile processor
 ```
 type: opsfile
-scenarios:
-- name: base-case
-  description: helpful text displayed by `./manifer list`
-  interpolator: # applied to all snippets in this scenario
-    vars:
-      sub: nested
-  snippets: # opsfiles to apply, in order
-  - path: ./base-case.yml
-    interpolator: # applied to single snippet
-      vars:
-        newbar: trendy
-```
-
-e.g. mainlib.yml
-```
-type: opsfile # other yaml templating tools could be supported in the future
-libraries:
-- alias: common # reference to another library file
-  path: ./commonlib.yml
-scenarios:
-- name: my-use-case
-  scenarios: # scenarios can reference other scenarios. The referenced scenario's snippets are applied first.
-  - name: common.base-case # prefix library alias if scenario name is in referenced library
-    interpolator: # variables will be applied to all snippets in the referenced scenario
-      vars:
-        e: f
-  global_interpolator: # applied all snippets in all scenarios as well as the template
-    vars:
-      bazz: 123
-    raw_args:
-      - -l=/tmp/vars.yml
+options:  
+  path: "/foo" # return a section of the composed yaml instead of the full document
 ```
 
 ## Invocation

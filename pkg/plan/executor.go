@@ -11,7 +11,7 @@ import (
 )
 
 type Executor interface {
-	Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error)
+	Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetProcessor *library.Processor, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error)
 }
 
 type InterpolationExecutor struct {
@@ -22,7 +22,7 @@ type InterpolationExecutor struct {
 	File         file.FileAccess
 }
 
-func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error) {
+func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetProcessor *library.Processor, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error) {
 	var snippetPath string
 	if snippet != nil {
 		snippetPath = snippet.Tag
@@ -36,10 +36,10 @@ func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *
 				return nil, fmt.Errorf("%w\n  while resolving relative snippet path %s", err, snippetPath)
 			}
 		}
-		out := fmt.Sprintf("\nSnippet %s; Params %+v\n", relpath, snippetVars.Merge(globals))
+		out := fmt.Sprintf("\nSnippet %s; Params %+v; Processor %+v\n", relpath, snippetVars.Merge(globals), snippetProcessor)
 		i.Output.Write([]byte(out))
 	}
-	bytes, err := i.processSnippet(template, snippet, snippetVars, globals)
+	bytes, err := i.processSnippet(template, snippet, snippetProcessor, snippetVars, globals)
 	if err != nil {
 		return nil, err
 	}
@@ -51,29 +51,33 @@ func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *
 	return bytes, nil
 }
 
-func (i *InterpolationExecutor) processSnippet(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error) {
+func (i *InterpolationExecutor) processSnippet(template *file.TaggedBytes, snippet *file.TaggedBytes, snippetProcessor *library.Processor, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error) {
 
 	var processedTemplate *file.TaggedBytes
+	var intSnippet *file.TaggedBytes
 	if snippet != nil {
 		snippetBytes, err := i.Interpolator.Interpolate(snippet, snippetVars.Merge(globals))
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  while trying to interpolate snippet", err)
 		}
-		intSnippet := &file.TaggedBytes{
+		intSnippet = &file.TaggedBytes{
 			Bytes: snippetBytes,
 			Tag:   snippet.Tag,
 		}
+	}
 
-		processedBytes, err := i.Processor.ProcessTemplate(template, intSnippet)
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to process template", err)
-		}
-		processedTemplate = &file.TaggedBytes{
-			Bytes: processedBytes,
-			Tag:   template.Tag,
-		}
-	} else {
-		processedTemplate = template
+	var processorOptions map[string]interface{}
+	if snippetProcessor != nil {
+		processorOptions = snippetProcessor.Options
+	}
+
+	processedBytes, err := i.Processor.ProcessTemplate(template, intSnippet, processorOptions)
+	if err != nil {
+		return nil, fmt.Errorf("%w\n  while trying to process template", err)
+	}
+	processedTemplate = &file.TaggedBytes{
+		Bytes: processedBytes,
+		Tag:   template.Tag,
 	}
 
 	intTemplateBytes, err := i.Interpolator.Interpolate(processedTemplate, globals)
