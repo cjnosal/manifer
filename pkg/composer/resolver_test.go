@@ -73,13 +73,13 @@ func TestResolve(t *testing.T) {
 						Params: []plan.TaggedParams{
 							{
 								Tag: "snippet",
-								Params: library.InterpolatorParams{
+								Interpolator: library.InterpolatorParams{
 									Vars: map[string]interface{}{"arg": "value"},
 								},
 							},
 							{
-								Tag:    "a scenario",
-								Params: library.InterpolatorParams{},
+								Tag:          "a scenario",
+								Interpolator: library.InterpolatorParams{},
 							},
 						},
 					},
@@ -146,13 +146,13 @@ func TestResolve(t *testing.T) {
 						Params: []plan.TaggedParams{
 							{
 								Tag: "snippet",
-								Params: library.InterpolatorParams{
+								Interpolator: library.InterpolatorParams{
 									Vars: map[string]interface{}{"arg": "value"},
 								},
 							},
 							{
-								Tag:    "a scenario",
-								Params: library.InterpolatorParams{},
+								Tag:          "a scenario",
+								Interpolator: library.InterpolatorParams{},
 							},
 						},
 					},
@@ -161,13 +161,13 @@ func TestResolve(t *testing.T) {
 						Params: []plan.TaggedParams{
 							{
 								Tag: "snippet",
-								Params: library.InterpolatorParams{
+								Interpolator: library.InterpolatorParams{
 									Vars: map[string]interface{}{"arg2": "value2"},
 								},
 							},
 							{
-								Tag:    "passthrough",
-								Params: library.InterpolatorParams{},
+								Tag:          "passthrough",
+								Interpolator: library.InterpolatorParams{},
 							},
 						},
 						Processor: library.Processor{
@@ -257,13 +257,13 @@ func TestResolve(t *testing.T) {
 						Params: []plan.TaggedParams{
 							{
 								Tag: "snippet",
-								Params: library.InterpolatorParams{
+								Interpolator: library.InterpolatorParams{
 									Vars: map[string]interface{}{"arg": "value"},
 								},
 							},
 							{
-								Tag:    "a scenario",
-								Params: library.InterpolatorParams{},
+								Tag:          "a scenario",
+								Interpolator: library.InterpolatorParams{},
 							},
 						},
 					},

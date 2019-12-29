@@ -7,9 +7,9 @@ const (
 )
 
 type Library struct {
-	Libraries []LibraryRef
-	Type      Type `yaml:"type,omitempty"`
-	Scenarios []Scenario
+	Libraries []LibraryRef `yaml:"libraries,omitempty"`
+	Type      Type         `yaml:"type,omitempty"`
+	Scenarios []Scenario   `yaml:"scenarios,omitempty"`
 }
 
 type LibraryRef struct {
@@ -19,11 +19,11 @@ type LibraryRef struct {
 
 type Scenario struct {
 	Name               string
-	Description        string
+	Description        string             `yaml:"description,omitempty"`
 	GlobalInterpolator InterpolatorParams `yaml:"global_interpolator,omitempty"`
 	Interpolator       InterpolatorParams `yaml:"interpolator,omitempty"`
-	Snippets           []Snippet
-	Scenarios          []ScenarioRef
+	Snippets           []Snippet          `yaml:"snippets,omitempty"`
+	Scenarios          []ScenarioRef      `yaml:"scenarios,omitempty"`
 }
 
 type ScenarioRef struct {
@@ -32,7 +32,7 @@ type ScenarioRef struct {
 }
 
 type Snippet struct {
-	Path         string
+	Path         string             `yaml:"path,omitempty"`
 	Interpolator InterpolatorParams `yaml:"interpolator,omitempty"`
 	Processor    Processor          `yaml:"processor,omitempty"`
 }

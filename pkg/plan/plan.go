@@ -5,8 +5,8 @@ import (
 )
 
 type Plan struct {
-	Global library.InterpolatorParams
-	Steps  []*Step
+	Global library.InterpolatorParams `yaml:"global,omitempty"`
+	Steps  []*Step                    `yaml:"steps,omitempty"`
 }
 
 func Append(a *Plan, b *Plan) *Plan {
@@ -17,13 +17,13 @@ func Append(a *Plan, b *Plan) *Plan {
 }
 
 type Step struct {
-	Snippet   string
-	Params    []TaggedParams
-	Processor library.Processor
+	Snippet   string            `yaml:"snippet,omitempty"`
+	Params    []TaggedParams    `yaml:"params,omitempty"`
+	Processor library.Processor `yaml:"processor,omitempty"`
 }
 
 func (s *Step) FlattenParams() library.InterpolatorParams {
-	args := library.InterpolatorParams{
+	intParams := library.InterpolatorParams{
 		Vars:      map[string]interface{}{},
 		VarFiles:  map[string]string{},
 		VarsFiles: []string{},
@@ -31,15 +31,15 @@ func (s *Step) FlattenParams() library.InterpolatorParams {
 		VarsStore: "",
 		RawArgs:   []string{},
 	}
-	for _, set := range s.Params {
-		args = args.Merge(set.Params)
+	for _, tp := range s.Params {
+		intParams = intParams.Merge(tp.Interpolator)
 	}
-	return args
+	return intParams
 }
 
 type TaggedParams struct {
-	Tag    string
-	Params library.InterpolatorParams
+	Tag          string                     `yaml:"tag,omitempty"`
+	Interpolator library.InterpolatorParams `yaml:"interpolator,omitempty"`
 }
 
 func FromScenarioTree(node *library.ScenarioNode) *Plan {
@@ -60,8 +60,8 @@ func FromScenarioTree(node *library.ScenarioNode) *Plan {
 
 func fromNode(node *library.ScenarioNode, plan *Plan, inherited []TaggedParams) {
 	scenarioParams := TaggedParams{
-		Tag:    node.Name,
-		Params: node.Interpolator.Merge(node.RefInterpolator),
+		Tag:          node.Name,
+		Interpolator: node.Interpolator.Merge(node.RefInterpolator),
 	}
 	newTaggedParams := append([]TaggedParams{scenarioParams}, inherited...)
 	for _, dep := range node.Dependencies {
@@ -70,8 +70,8 @@ func fromNode(node *library.ScenarioNode, plan *Plan, inherited []TaggedParams) 
 	plan.Global = plan.Global.Merge(node.GlobalInterpolator)
 	for _, snippet := range node.Snippets {
 		snippetParams := TaggedParams{
-			Tag:    "snippet",
-			Params: snippet.Interpolator,
+			Tag:          "snippet",
+			Interpolator: snippet.Interpolator,
 		}
 		plan.Steps = append(plan.Steps, &Step{
 			Snippet:   snippet.Path,

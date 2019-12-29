@@ -23,13 +23,13 @@ type LoadedLibrary struct {
 
 type ScenarioNode struct {
 	Name               string
-	Description        string
-	LibraryPath        string
-	GlobalInterpolator InterpolatorParams
-	RefInterpolator    InterpolatorParams
-	Interpolator       InterpolatorParams
-	Snippets           []Snippet
-	Dependencies       []*ScenarioNode
+	Description        string             `yaml:"description,omitempty"`
+	LibraryPath        string             `yaml:"library_path,omitempty"`
+	GlobalInterpolator InterpolatorParams `yaml:"global_interpolator,omitempty"`
+	RefInterpolator    InterpolatorParams `yaml:"ref_interpolator,omitempty"`
+	Interpolator       InterpolatorParams `yaml:"interpolator,omitempty"`
+	Snippets           []Snippet          `yaml:"snippets,omitempty"`
+	Dependencies       []*ScenarioNode    `yaml:"dependencies,omitempty"`
 }
 
 func (l *LoadedLibrary) GetScenarioTree(name string) (*ScenarioNode, error) {

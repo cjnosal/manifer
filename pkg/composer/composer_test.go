@@ -36,8 +36,8 @@ func TestCompose(t *testing.T) {
 				Snippet: "/snippet",
 				Params: []plan.TaggedParams{
 					{
-						Tag:    "snippet",
-						Params: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
+						Tag:          "snippet",
+						Interpolator: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
 					},
 				},
 				Processor: library.Processor{Type: library.OpsFile, Options: map[string]interface{}{}},
@@ -55,8 +55,8 @@ func TestCompose(t *testing.T) {
 				Snippet: "/snippet",
 				Params: []plan.TaggedParams{
 					{
-						Tag:    "snippet",
-						Params: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
+						Tag:          "snippet",
+						Interpolator: library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs"}},
 					},
 				},
 				Processor: library.Processor{Type: library.OpsFile, Options: map[string]interface{}{}},

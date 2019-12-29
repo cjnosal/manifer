@@ -9,6 +9,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/yaml"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
@@ -22,6 +23,7 @@ func TestExecute(t *testing.T) {
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -31,6 +33,7 @@ func TestExecute(t *testing.T) {
 			Interpolator: mockInterpolator,
 			Output:       writer,
 			File:         mockFile,
+			Yaml:         mockYaml,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
@@ -48,11 +51,17 @@ func TestExecute(t *testing.T) {
 			Type:    library.OpsFile,
 			Options: map[string]interface{}{},
 		}
+		executorStep := ExecutorStep{
+			Processor:    snippetProcessor,
+			Interpolator: snippetVars.Merge(globals),
+			Snippet:      "../snippet",
+		}
 
 		mockInterpolator.EXPECT().Interpolate(snippet, library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs", "global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intSnippetBytes"), nil)
 		mockInterpolator.EXPECT().Interpolate(processedIn, library.InterpolatorParams{Vars: map[string]interface{}{"global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intTemplateBytes"), nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return([]byte("bytes"), nil)
 		mockFile.EXPECT().ResolveRelativeFromWD("snippet").Times(1).Return("../snippet", nil)
+		mockYaml.EXPECT().Marshal(executorStep).Times(1).Return([]byte("yamlstep"), nil)
 		bytes, err := subject.Execute(true, false, in, snippet, snippetProcessor, snippetVars, globals)
 
 		if err != nil {
@@ -61,7 +70,7 @@ func TestExecute(t *testing.T) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", "bytes", string(bytes))
 		}
 
-		expectedStep := "\nSnippet ../snippet; Params {Vars:map[global:gargs snippet:sargs] VarFiles:map[] VarsFiles:[] VarsEnv:[] VarsStore: RawArgs:[-vfoo=bar]}; Processor &{Type:opsfile Options:map[]}\n"
+		expectedStep := "\nyamlstep"
 		if writer.String() != expectedStep {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedStep, writer.String())
 		}
@@ -74,6 +83,7 @@ func TestExecute(t *testing.T) {
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -83,9 +93,10 @@ func TestExecute(t *testing.T) {
 			Interpolator: mockInterpolator,
 			Output:       writer,
 			File:         mockFile,
+			Yaml:         mockYaml,
 		}
 
-		expectedDiff := "Diff:\ndiff"
+		expectedDiff := "\nDiff:\ndiff"
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
 		processedIn := &file.TaggedBytes{Tag: "in", Bytes: []byte("bytes")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
@@ -127,6 +138,7 @@ func TestExecute(t *testing.T) {
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -136,6 +148,7 @@ func TestExecute(t *testing.T) {
 			Interpolator: mockInterpolator,
 			Output:       writer,
 			File:         mockFile,
+			Yaml:         mockYaml,
 		}
 
 		expectedError := errors.New("test\n  while trying to interpolate snippet")
@@ -169,6 +182,7 @@ func TestExecute(t *testing.T) {
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -178,6 +192,7 @@ func TestExecute(t *testing.T) {
 			Interpolator: mockInterpolator,
 			Output:       writer,
 			File:         mockFile,
+			Yaml:         mockYaml,
 		}
 
 		expectedError := errors.New("test\n  while trying to process template")
@@ -213,6 +228,7 @@ func TestExecute(t *testing.T) {
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
+		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
@@ -222,6 +238,7 @@ func TestExecute(t *testing.T) {
 			Interpolator: mockInterpolator,
 			Output:       writer,
 			File:         mockFile,
+			Yaml:         mockYaml,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}

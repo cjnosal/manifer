@@ -5,12 +5,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/scenario"
+	"github.com/cjnosal/manifer/pkg/yaml"
 )
 
 type listCmd struct {
@@ -66,7 +66,7 @@ func (p *listCmd) execute(cmd *cobra.Command, args []string) {
 	if p.printJson {
 		outBytes = p.formatJson(entries)
 	} else {
-		outBytes = p.formatPlain(entries)
+		outBytes = p.formatYaml(entries)
 	}
 
 	_, err = p.writer.Write(outBytes)
@@ -81,17 +81,8 @@ func (p *listCmd) formatJson(entries []scenario.ScenarioEntry) []byte {
 	return bytes
 }
 
-func (p *listCmd) formatPlain(entries []scenario.ScenarioEntry) []byte {
-	builder := strings.Builder{}
-	for _, entry := range entries {
-		builder.WriteString(entry.Name)
-		builder.WriteString("\n\t")
-		description := entry.Description
-		if len(description) == 0 {
-			description = "no description"
-		}
-		builder.WriteString(description)
-		builder.WriteString("\n\n")
-	}
-	return []byte(builder.String())
+func (p *listCmd) formatYaml(entries []scenario.ScenarioEntry) []byte {
+	yaml := &yaml.Yaml{}
+	bytes, _ := yaml.Marshal(entries)
+	return bytes
 }

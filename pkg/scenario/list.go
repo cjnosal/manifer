@@ -13,8 +13,8 @@ type Lister struct {
 }
 
 type ScenarioEntry struct {
-	Name        string
-	Description string
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
 }
 
 func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]ScenarioEntry, error) {

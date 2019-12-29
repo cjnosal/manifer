@@ -7,6 +7,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/yaml"
 	"io"
 )
 
@@ -20,6 +21,13 @@ type InterpolationExecutor struct {
 	Diff         diff.Diff
 	Output       io.Writer
 	File         file.FileAccess
+	Yaml         yaml.YamlAccess
+}
+
+type ExecutorStep struct {
+	Snippet      string                     `yaml:"snippet,omitempty"`
+	Processor    *library.Processor         `yaml:"processor,omitempty"`
+	Interpolator library.InterpolatorParams `yaml:"interpolator,omitempty"`
 }
 
 func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *file.TaggedBytes, snippet *file.TaggedBytes, snippetProcessor *library.Processor, snippetVars library.InterpolatorParams, globals library.InterpolatorParams) ([]byte, error) {
@@ -28,23 +36,30 @@ func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *
 		snippetPath = snippet.Tag
 	}
 	if showPlan {
-		var relpath string
-		var err error
+		step := ExecutorStep{
+			Interpolator: snippetVars.Merge(globals),
+			Processor:    snippetProcessor,
+		}
 		if snippet != nil {
-			relpath, err = i.File.ResolveRelativeFromWD(snippetPath)
+			relpath, err := i.File.ResolveRelativeFromWD(snippetPath)
 			if err != nil {
 				return nil, fmt.Errorf("%w\n  while resolving relative snippet path %s", err, snippetPath)
 			}
+			step.Snippet = relpath
 		}
-		out := fmt.Sprintf("\nSnippet %s; Params %+v; Processor %+v\n", relpath, snippetVars.Merge(globals), snippetProcessor)
-		i.Output.Write([]byte(out))
+		bytes, err := i.Yaml.Marshal(step)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while marshaling execution step", err)
+		}
+		i.Output.Write([]byte("\n"))
+		i.Output.Write(bytes)
 	}
 	bytes, err := i.processSnippet(template, snippet, snippetProcessor, snippetVars, globals)
 	if err != nil {
 		return nil, err
 	}
 	if showDiff {
-		i.Output.Write([]byte("Diff:\n"))
+		i.Output.Write([]byte("\nDiff:\n"))
 		diff := i.Diff.StringDiff(string(template.Bytes), string(bytes))
 		i.Output.Write([]byte(diff))
 	}

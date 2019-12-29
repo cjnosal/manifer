@@ -324,6 +324,7 @@ func newComposer(logger io.Writer) composer.Composer {
 		Diff:         diff,
 		Output:       logger,
 		File:         file,
+		Yaml:         yaml,
 	}
 	return &composer.ComposerImpl{
 		Resolver: resolver,

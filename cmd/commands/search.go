@@ -11,6 +11,7 @@ import (
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/scenario"
+	"github.com/cjnosal/manifer/pkg/yaml"
 )
 
 type searchCmd struct {
@@ -75,7 +76,7 @@ func (p *searchCmd) execute(cmd *cobra.Command, args []string) {
 	if p.printJson {
 		outBytes = p.formatJson(matches)
 	} else {
-		outBytes = p.formatPlain(matches)
+		outBytes = p.formatYaml(matches)
 	}
 
 	_, err = p.writer.Write(outBytes)
@@ -90,17 +91,8 @@ func (p *searchCmd) formatJson(entries []scenario.ScenarioEntry) []byte {
 	return bytes
 }
 
-func (p *searchCmd) formatPlain(entries []scenario.ScenarioEntry) []byte {
-	builder := strings.Builder{}
-	for _, entry := range entries {
-		builder.WriteString(entry.Name)
-		builder.WriteString("\n\t")
-		description := entry.Description
-		if len(description) == 0 {
-			description = "no description"
-		}
-		builder.WriteString(description)
-		builder.WriteString("\n\n")
-	}
-	return []byte(builder.String())
+func (p *searchCmd) formatYaml(entries []scenario.ScenarioEntry) []byte {
+	yaml := yaml.Yaml{}
+	bytes, _ := yaml.Marshal(entries)
+	return bytes
 }

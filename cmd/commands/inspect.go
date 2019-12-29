@@ -2,17 +2,16 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cjnosal/manifer/lib"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
+	"github.com/cjnosal/manifer/pkg/yaml"
 )
 
 type inspectCmd struct {
@@ -101,17 +100,13 @@ func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 		if p.printJson {
 			outBytes = p.formatJson(executionPlan)
 		} else {
-			outBytes = p.formatPlainPlan(executionPlan)
+			outBytes = p.formatYaml(executionPlan)
 		}
 	} else {
 		if p.printJson {
 			outBytes = p.formatJson(nodes)
 		} else {
-			builder := strings.Builder{}
-			for _, node := range nodes {
-				p.formatPlainTree(node, &builder, "")
-			}
-			outBytes = []byte(builder.String())
+			outBytes = p.formatYaml(nodes)
 		}
 	}
 
@@ -127,35 +122,8 @@ func (p *inspectCmd) formatJson(i interface{}) []byte {
 	return bytes
 }
 
-func (p *inspectCmd) formatPlainTree(node *library.ScenarioNode, builder *strings.Builder, indent string) {
-	builder.WriteString(fmt.Sprintf("%sname:        %s (from %s)\n", indent, node.Name, node.LibraryPath))
-	builder.WriteString(fmt.Sprintf("%sdescription: %s\n", indent, node.Description))
-	builder.WriteString(fmt.Sprintf("%sglobal:  %+v (applied to all scenarios)\n", indent, node.GlobalInterpolator))
-	builder.WriteString(fmt.Sprintf("%srefvars: %+v (applied to snippets and subscenarios)\n", indent, node.RefInterpolator))
-	builder.WriteString(fmt.Sprintf("%svars:    %+v (applied to snippets and subscenarios)\n", indent, node.Interpolator))
-
-	builder.WriteString(fmt.Sprintf("%ssnippets:\n", indent))
-	for _, snippet := range node.Snippets {
-		builder.WriteString(fmt.Sprintf("%s  %s\n", indent, snippet.Path))
-		builder.WriteString(fmt.Sprintf("%s  vars: %+v\n", indent, snippet.Interpolator))
-		builder.WriteString("\n")
-	}
-	builder.WriteString(fmt.Sprintf("%sdependencies:\n", indent))
-	for _, dep := range node.Dependencies {
-		p.formatPlainTree(dep, builder, indent+"  ")
-		builder.WriteString("\n")
-	}
-}
-
-func (p *inspectCmd) formatPlainPlan(executionPlan *plan.Plan) []byte {
-	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("global: %+v\n", executionPlan.Global))
-	for _, step := range executionPlan.Steps {
-		builder.WriteString(fmt.Sprintf("- %s\n", step.Snippet))
-		builder.WriteString(fmt.Sprintf("  vars:\n"))
-		for _, argSet := range step.Params {
-			builder.WriteString(fmt.Sprintf("    %s: %+v\n", argSet.Tag, argSet.Params))
-		}
-	}
-	return []byte(builder.String())
+func (p *inspectCmd) formatYaml(i interface{}) []byte {
+	yaml := yaml.Yaml{}
+	bytes, _ := yaml.Marshal(i)
+	return bytes
 }
