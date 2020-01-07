@@ -151,11 +151,13 @@ func (l *Loader) loadLib(path string, loaded *LoadedLibrary, top bool) error {
 
 	for i, scenario := range lib.Scenarios {
 		for j, snippet := range scenario.Snippets {
-			absSnippetPath, err := l.File.ResolveRelativeTo(snippet.Path, path)
-			if err != nil {
-				return fmt.Errorf("%w\n  while resolving snippet path %s from %s", err, snippet.Path, path)
+			if snippet.Path != "" {
+				absSnippetPath, err := l.File.ResolveRelativeTo(snippet.Path, path)
+				if err != nil {
+					return fmt.Errorf("%w\n  while resolving snippet path %s from %s", err, snippet.Path, path)
+				}
+				lib.Scenarios[i].Snippets[j].Path = absSnippetPath
 			}
-			lib.Scenarios[i].Snippets[j].Path = absSnippetPath
 		}
 	}
 
