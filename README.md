@@ -1,21 +1,22 @@
 # manifer
-Tools for generating yaml documents from templates using `bosh interpolate`
+Manifer uses yaml processors and variable interpolation to generate yaml documents from a starting template and a set of reusable yaml snippets.
 
-To reduce the size and complexity of yaml documents, named sets of ops files
+To reduce the size and complexity of yaml documents, named sets of ops files or yq scripts 
 can be organized into a 'library'. The 'template' is now only 
 responsible for simplified high level definitions. Running `manifer` will 
 combine the library and template to compose the final document.
 
 # glossary
 - template:    an arbitrary yaml file to be modified
-- snippet:     a file used to modify the template (e.g. BOSH ops files)
+- snippet:     a file used to modify the template (e.g. BOSH ops files or yq scripts)
 - scenario:    a named collection of snippets that should be used together
-- library:     manifer's yaml file format that defines a collection of scenarios
-- interpolate: apply a snippet to the template
-- compose:     interpolate for all snippets defined in a set of scenarios
+- library:     manifer's yaml file format that defines a collection of scenarios and dependencies between scenarios
+- interpolate: replace variable placeholders with values from the CLI, files, or environment variables
+- process:     apply structural changes to a template as defined by a snippet
+- compose:     process and interpolate all snippets defined in a set of scenarios
 
 # getting started
-1a) generate a library from your collection of opsfiles  
+1a) generate a library from your collection of opsfiles and yq scripts  
   `manifer import -r -p ./ops-dir -o ./new-lib.yml`  
 or  
 1b) generate a library from your yaml file  
