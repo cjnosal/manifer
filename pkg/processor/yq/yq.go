@@ -1,10 +1,10 @@
 package yq
 
 import (
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 
 	"github.com/jessevdk/go-flags"
 	y2 "github.com/mikefarah/yaml/v2" // for MapSlice - replaced by Node in yaml v3

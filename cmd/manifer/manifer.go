@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cjnosal/manifer/cmd/commands"
-	"github.com/cjnosal/manifer/lib"
+	"github.com/cjnosal/manifer/v2/cmd/commands"
+	"github.com/cjnosal/manifer/v2/lib"
 )
 
 func main() {

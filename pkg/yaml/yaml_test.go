@@ -3,7 +3,7 @@ package yaml
 import (
 	"errors"
 	"fmt"
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/google/go-cmp/cmp"
 	y "gopkg.in/yaml.v3"
 	"strings"

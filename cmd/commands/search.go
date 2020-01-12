@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cjnosal/manifer/lib"
-	"github.com/cjnosal/manifer/pkg/scenario"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/lib"
+	"github.com/cjnosal/manifer/v2/pkg/scenario"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 )
 
 type searchCmd struct {

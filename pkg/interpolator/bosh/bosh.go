@@ -3,9 +3,9 @@ package bosh
 import (
 	"fmt"
 
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
-	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/interpolator"
+	"github.com/cjnosal/manifer/v2/pkg/library"
 	boshopts "github.com/cloudfoundry/bosh-cli/cmd/opts"
 	boshtpl "github.com/cloudfoundry/bosh-cli/director/template"
 	"github.com/jessevdk/go-flags"

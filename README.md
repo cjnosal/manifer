@@ -267,6 +267,13 @@ Libraries consist of:
     global_interpolator:
       vars_store: ./generated.yml
   ```
+
+### migrating from v1
+In v1 libraries interpolator variables were specified as CLI `args`. In v2 `args` is replaced by the `interpolator` struct.  
+
+When upgrading from manifer v1=>v2 you can either:  
+- move each `args` element to `interpolator.raw_args` or  
+- replace `args` with the appropriate `interpolator.var*` field
   
 ### interpolator variables
 Variables can be defined by adding an `interpolator` block to a snippet, scenario reference, scenario, or via passthrough flags from the CLI
@@ -342,7 +349,7 @@ should be unambiguous.
 `./scripts/test.sh [unit|integration|go test flags]`
 - `-count=1` can be used to disable test caching of integration tests in `cmd/manifer`
 
-# import
+# use manifer in your project
 `lib.Manifer` can be imported to list scenarios or compose yaml
 
 ```
@@ -351,7 +358,7 @@ package main
 import (
   "os"
   "fmt"
-  "github.com/cjnosal/manifer/lib"
+  "github.com/cjnosal/manifer/v2/lib"
 )
 
 func main() {

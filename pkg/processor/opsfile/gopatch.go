@@ -2,7 +2,7 @@ package opsfile
 
 import (
 	"fmt"
-	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
 	"github.com/cppforlife/go-patch/patch"
 )
 

@@ -2,8 +2,8 @@ package library
 
 import (
 	"fmt"
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 	"strings"
 )
 

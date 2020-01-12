@@ -2,9 +2,9 @@ package yq
 
 import (
 	"errors"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/yaml"
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	y "gopkg.in/yaml.v3"

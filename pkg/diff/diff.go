@@ -1,7 +1,7 @@
 package diff
 
 import (
-	"github.com/cjnosal/manifer/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/file"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 

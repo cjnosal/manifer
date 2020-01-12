@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"

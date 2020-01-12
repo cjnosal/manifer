@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cjnosal/manifer/lib"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/plan"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/lib"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/plan"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 )
 
 type inspectCmd struct {

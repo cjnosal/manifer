@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/library"
 	"github.com/google/go-cmp/cmp"
 )
 

@@ -1,7 +1,7 @@
 package plan
 
 import (
-	"github.com/cjnosal/manifer/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/library"
 )
 
 type Plan struct {

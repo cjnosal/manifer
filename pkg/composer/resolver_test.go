@@ -4,15 +4,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/cjnosal/manifer/pkg/interpolator"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/plan"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/processor/factory"
+	"github.com/cjnosal/manifer/v2/pkg/interpolator"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/plan"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/processor/factory"
 )
 
 func TestResolve(t *testing.T) {

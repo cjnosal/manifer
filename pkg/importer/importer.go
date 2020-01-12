@@ -2,10 +2,10 @@ package importer
 
 import (
 	"fmt"
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/processor/factory"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/processor/factory"
 	"os"
 	"path/filepath"
 	"strings"

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/sergi/go-diff/diffmatchpatch"

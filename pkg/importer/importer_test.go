@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cjnosal/manifer/test"
+	"github.com/cjnosal/manifer/v2/test"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/processor/factory"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/processor/factory"
 )
 
 type TestFileInfo struct {

@@ -2,12 +2,12 @@ package factory
 
 import (
 	"fmt"
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/processor/opsfile"
-	"github.com/cjnosal/manifer/pkg/processor/yq"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
+	"github.com/cjnosal/manifer/v2/pkg/processor/opsfile"
+	"github.com/cjnosal/manifer/v2/pkg/processor/yq"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 )
 
 type ProcessorFactory interface {

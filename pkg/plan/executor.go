@@ -2,12 +2,12 @@ package plan
 
 import (
 	"fmt"
-	"github.com/cjnosal/manifer/pkg/diff"
-	"github.com/cjnosal/manifer/pkg/file"
-	"github.com/cjnosal/manifer/pkg/interpolator"
-	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor/factory"
-	"github.com/cjnosal/manifer/pkg/yaml"
+	"github.com/cjnosal/manifer/v2/pkg/diff"
+	"github.com/cjnosal/manifer/v2/pkg/file"
+	"github.com/cjnosal/manifer/v2/pkg/interpolator"
+	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor/factory"
+	"github.com/cjnosal/manifer/v2/pkg/yaml"
 	"io"
 )
 

@@ -1,4 +1,4 @@
-module github.com/cjnosal/manifer
+module github.com/cjnosal/manifer/v2
 
 go 1.13
 
