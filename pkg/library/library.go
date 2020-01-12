@@ -4,10 +4,11 @@ type Type string
 
 const (
 	OpsFile Type = "opsfile"
+	Yq      Type = "yq"
 )
 
 var (
-	Types []Type = []Type{OpsFile} // treat as const
+	Types []Type = []Type{OpsFile, Yq} // treat as const
 )
 
 type Library struct {

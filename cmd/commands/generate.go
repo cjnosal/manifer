@@ -18,6 +18,7 @@ type generateCmd struct {
 	lib      string
 	template string
 	dir      string
+	libType  string
 
 	logger  *log.Logger
 	writer  io.Writer
@@ -45,6 +46,7 @@ func NewGenerateCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command 
 	cobraGenerate.Flags().StringVarP(&generate.lib, "out", "o", "", "Path to save generated library file")
 	cobraGenerate.Flags().StringVarP(&generate.template, "template", "t", "", "Template to generate from")
 	cobraGenerate.Flags().StringVarP(&generate.dir, "directory", "d", "", "Directory to save generated snippets (default out/snippets)")
+	cobraGenerate.Flags().StringVarP(&generate.libType, "processor", "y", "", "Yaml backend for this library (opsfile or yq)")
 
 	return cobraGenerate
 }
@@ -61,11 +63,16 @@ func (p *generateCmd) execute(cmd *cobra.Command, args []string) {
 		p.logger.Printf(cmd.Long)
 		os.Exit(1)
 	}
+	if len(p.libType) == 0 {
+		p.logger.Printf("Yaml processor not specified")
+		p.logger.Printf(cmd.Long)
+		os.Exit(1)
+	}
 	if len(p.dir) == 0 {
 		p.dir = filepath.Join(filepath.Dir(p.lib), "snippets")
 	}
 
-	lib, err := p.manifer.Generate(library.OpsFile, p.template, p.lib, p.dir)
+	lib, err := p.manifer.Generate(library.Type(p.libType), p.template, p.lib, p.dir)
 
 	if err != nil {
 		p.logger.Printf("%v\n  while generating library", err)

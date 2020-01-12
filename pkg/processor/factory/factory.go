@@ -6,6 +6,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
 	"github.com/cjnosal/manifer/pkg/processor/opsfile"
+	"github.com/cjnosal/manifer/pkg/processor/yq"
 	"github.com/cjnosal/manifer/pkg/yaml"
 )
 
@@ -29,6 +30,8 @@ func NewProcessorFactory(yaml yaml.YamlAccess, file file.FileAccess) ProcessorFa
 func (i *processorFactory) Create(t library.Type) (processor.Processor, error) {
 	if t == library.OpsFile {
 		return opsfile.NewOpsFileProcessor(i.yaml, i.file), nil
+	} else if t == library.Yq {
+		return yq.NewYqProcessor(i.yaml, i.file), nil
 	}
 	return nil, fmt.Errorf("Unknown library type %v", t)
 }
@@ -36,6 +39,8 @@ func (i *processorFactory) Create(t library.Type) (processor.Processor, error) {
 func (i *processorFactory) CreateGenerator(t library.Type) (processor.SnippetGenerator, error) {
 	if t == library.OpsFile {
 		return processor.NewSnippetGenerator(i.yaml, opsfile.NewPathBuilder()), nil
+	} else if t == library.Yq {
+		return processor.NewSnippetGenerator(i.yaml, yq.NewPathBuilder()), nil
 	}
 	return nil, fmt.Errorf("Unknown library type %v", t)
 }

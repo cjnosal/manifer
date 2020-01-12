@@ -71,6 +71,7 @@ Flags:
   -d, --directory string   Directory to save generated snippets (default out/snippets)
   -h, --help               help for generate
   -o, --out string         Path to save generated library file
+  -y, --processor string   Yaml backend for this library (opsfile or yq)
   -t, --template string    Template to generate from
 
 Global Flags:
@@ -193,8 +194,10 @@ foo:
 ```
 
 ## snippets
-Yaml snippets to compose into the template use [go-patch](https://github.com/cppforlife/go-patch) format, 
-Also known as [BOSH Ops Files](https://bosh.io/docs/cli-ops-files).
+Yaml snippets to compose into the template:  
+- opsfile snippets use [go-patch](https://github.com/cppforlife/go-patch) format, 
+Also known as [BOSH Ops Files](https://bosh.io/docs/cli-ops-files).  
+- yq snippets use [yq](https://mikefarah.github.io/yq/) script format
 
 e.g. base-case.yml
 ```
@@ -288,6 +291,19 @@ type: opsfile
 options:  
   path: "/foo" # return a section of the composed yaml instead of the full document
 ```
+See the [go-patch](https://github.com/cppforlife/go-patch) and [ops-file](https://bosh.io/docs/cli-ops-files) docs for more details
+
+#### yq processor
+```
+type: yq
+options:  
+  command: # write, read, delete, prefix, merge
+  path: # yaml element to read or delete
+  prefix: # key to nest the current yaml structure under
+  overwrite: # boolean for merges to replace existing elements
+  append: # boolean for merges to append new array elements
+```
+See the [yq docs](https://mikefarah.github.io/yq/) for more details
 
 ## Invocation
 Running `manifer compose --library mainlib.yml --template foo-template.yml --scenario my-use-case` should produce:

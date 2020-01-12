@@ -1,0 +1,63 @@
+type: yq
+
+scenarios:
+- name: read
+  description: read path foo
+  snippets:
+  - processor:
+      options:
+        command: "read"
+        path: "foo"
+- name: write
+  description: write paths in yq_script.yml
+  snippets:
+  - path: "./yq_script.yml"
+    processor:
+      options:
+        command: "write"
+- name: prefix
+  description: prefix with bizz
+  snippets:
+  - processor:
+      options:
+        command: "prefix"
+        prefix: "bizz"
+- name: delete
+  description: delete path bazz
+  snippets:
+  - processor:
+      options:
+        command: "delete"
+        path: "bazz"
+- name: merge_append
+  description: merge with yq_template.yml (append)
+  snippets:
+  - path: "./yq_template.yml"
+    processor:
+      options:
+        command: "merge"
+        append: true
+- name: merge_overwrite
+  description: merge with yq_template.yml (overwrite)
+  snippets:
+  - path: "./yq_template.yml"
+    processor:
+      options:
+        command: "merge"
+        overwrite: true
+- name: merge_both
+  description: merge with yq_template.yml (overwrite and append)
+  snippets:
+  - path: "./yq_template.yml"
+    processor:
+      options:
+        command: "merge"
+        overwrite: true
+        append: true
+- name: merge_neither
+  description: merge with yq_template.yml
+  snippets:
+  - path: "./yq_template.yml"
+    processor:
+      options:
+        command: "merge"

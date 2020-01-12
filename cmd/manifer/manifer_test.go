@@ -643,6 +643,8 @@ steps:
 		cmd := exec.Command(
 			"../../manifer",
 			"generate",
+			"-y",
+			"opsfile",
 			"-t",
 			"../../test/data/v2/base_library.yml",
 			"-d",
@@ -830,6 +832,60 @@ steps:
       - path: placeholder_opsfile.yml
         processor:
             type: opsfile
+  - name: base_library
+    description: imported from base_library.yml
+    snippets:
+      - path: base_library.yml
+        processor:
+            type: yq
+  - name: library
+    description: imported from library.yml
+    snippets:
+      - path: library.yml
+        processor:
+            type: yq
+  - name: ref_library
+    description: imported from ref_library.yml
+    snippets:
+      - path: ref_library.yml
+        processor:
+            type: yq
+  - name: template
+    description: imported from template.yml
+    snippets:
+      - path: template.yml
+        processor:
+            type: yq
+  - name: template_with_var
+    description: imported from template_with_var.yml
+    snippets:
+      - path: template_with_var.yml
+        processor:
+            type: yq
+  - name: vars
+    description: imported from vars.yml
+    snippets:
+      - path: vars.yml
+        processor:
+            type: yq
+  - name: yq_library
+    description: imported from yq_library.yml
+    snippets:
+      - path: yq_library.yml
+        processor:
+            type: yq
+  - name: yq_script
+    description: imported from yq_script.yml
+    snippets:
+      - path: yq_script.yml
+        processor:
+            type: yq
+  - name: yq_template
+    description: imported from yq_template.yml
+    snippets:
+      - path: yq_template.yml
+        processor:
+            type: yq
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {

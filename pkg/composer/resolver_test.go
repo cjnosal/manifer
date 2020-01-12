@@ -25,6 +25,7 @@ func TestResolve(t *testing.T) {
 		yamlError                      error
 		expectedLibraries              *library.LoadedLibrary
 		expectedOpsFilePassthroughNode *library.ScenarioNode
+		expectedYqPassthroughNode      *library.ScenarioNode
 		expectedVarNode                *library.ScenarioNode
 		parseError                     error
 		expectedPlan                   *plan.Plan
@@ -99,6 +100,7 @@ func TestResolve(t *testing.T) {
 			scenarioNames: []string{},
 			passthrough: []string{
 				"-o=opsfile",
+				"-s=yqscript",
 			},
 			expectedOpsFilePassthroughNode: &library.ScenarioNode{
 				Snippets: []library.Snippet{
@@ -111,6 +113,20 @@ func TestResolve(t *testing.T) {
 					},
 				},
 				Name:        "passthrough opsfile",
+				Description: "args passed after --",
+				LibraryPath: "<cli>",
+			},
+			expectedYqPassthroughNode: &library.ScenarioNode{
+				Snippets: []library.Snippet{
+					{
+						Path:         "yqscript",
+						Interpolator: library.InterpolatorParams{},
+						Processor: library.Processor{
+							Type: library.Yq,
+						},
+					},
+				},
+				Name:        "passthrough yq",
 				Description: "args passed after --",
 				LibraryPath: "<cli>",
 			},
@@ -157,6 +173,22 @@ func TestResolve(t *testing.T) {
 						},
 						Processor: library.Processor{
 							Type: library.OpsFile,
+						},
+					},
+					{
+						Snippet: "yqscript",
+						Params: []plan.TaggedParams{
+							{
+								Tag:          "snippet",
+								Interpolator: library.InterpolatorParams{},
+							},
+							{
+								Tag:          "passthrough yq",
+								Interpolator: library.InterpolatorParams{},
+							},
+						},
+						Processor: library.Processor{
+							Type: library.Yq,
 						},
 					},
 				},
@@ -331,15 +363,20 @@ func TestResolve(t *testing.T) {
 			mockLoader := library.NewMockLibraryLoader(ctrl)
 			mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 			mockOpsProcessor := processor.NewMockProcessor(ctrl)
+			mockYqProcessor := processor.NewMockProcessor(ctrl)
 			mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 
 			mockLoader.EXPECT().Load(c.libraryPaths).Times(1).Return(c.expectedLibraries, c.yamlError)
 			if c.yamlError == nil {
 				mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockOpsProcessor, nil)
 				mockOpsProcessor.EXPECT().ParsePassthroughFlags(c.passthrough).Times(1).Return(c.expectedOpsFilePassthroughNode, []string{"opsremainder"}, c.parseError)
+				if c.parseError == nil {
+					mockProcessorFactory.EXPECT().Create(library.Yq).Times(1).Return(mockYqProcessor, nil)
+					mockYqProcessor.EXPECT().ParsePassthroughFlags([]string{"opsremainder"}).Times(1).Return(c.expectedYqPassthroughNode, []string{"yqremainder"}, nil)
+				}
 			}
 			if c.yamlError == nil && c.parseError == nil {
-				mockInterpolator.EXPECT().ParsePassthroughVars([]string{"opsremainder"}).Times(1).Return(c.expectedVarNode, []string{}, c.parseVarError)
+				mockInterpolator.EXPECT().ParsePassthroughVars([]string{"yqremainder"}).Times(1).Return(c.expectedVarNode, []string{}, c.parseVarError)
 			}
 
 			subject := Resolver{

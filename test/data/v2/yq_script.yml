@@ -1,0 +1,3 @@
+foo: yq
+bazz.buzz[+]: bee
+unique: key
