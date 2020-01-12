@@ -290,7 +290,7 @@ interpolator:
 See [bosh interpolate](https://bosh.io/docs/cli-int/) and [variable types](https://bosh.io/docs/variable-types/) for more details
 
 ### processor options
-A snippet can override the libraries processor type, or provide options
+A snippet can override the library's default processor type, or provide options
 
 #### opsfile processor
 ```
@@ -300,17 +300,21 @@ options:
 ```
 See the [go-patch](https://github.com/cppforlife/go-patch) and [ops-file](https://bosh.io/docs/cli-ops-files) docs for more details
 
+Differentiating features: field matching and index selection
+
 #### yq processor
 ```
 type: yq
 options:  
-  command: # write, read, delete, prefix, merge
+  command: # write, read, delete, prefix, merge (default write)
   path: # yaml element to read or delete
   prefix: # key to nest the current yaml structure under
   overwrite: # boolean for merges to replace existing elements
   append: # boolean for merges to append new array elements
 ```
 See the [yq docs](https://mikefarah.github.io/yq/) for more details
+
+Differentiating features: wildcards, prefix, and merge
 
 ## Invocation
 Running `manifer compose --library mainlib.yml --template foo-template.yml --scenario my-use-case` should produce:
