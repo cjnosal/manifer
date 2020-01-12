@@ -38,11 +38,13 @@ func TestBuild(t *testing.T) {
 			"../../test/data/v2/vars.yml",
 		)
 		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
 		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expectedOut := `base2: basic_from_placeholder
@@ -85,7 +87,7 @@ set: by_first
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expectedOut := `base2: basic_from_placeholder
@@ -195,7 +197,7 @@ interpolator:
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expectedOut := `base2: basic_from_placeholder
@@ -295,7 +297,7 @@ Diff:
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expectedOut := `base1: a
@@ -321,12 +323,14 @@ what: now
 			"-l",
 			"../../test/data/v2/library.yml",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expected := `- name: bizz
@@ -339,9 +343,9 @@ what: now
   description: a starting point
 `
 
-		if !cmp.Equal(writer.String(), expected) {
+		if !cmp.Equal(outWriter.String(), expected) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-				expected, writer.String(), cmp.Diff(expected, writer.String()))
+				expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 		}
 	})
 
@@ -353,19 +357,21 @@ what: now
 			"../../test/data/v2/library.yml",
 			"-j",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expected := `[{"Name":"bizz","Description":"adds an op"},{"Name":"empty","Description":"contributes nothing"},{"Name":"placeholder","Description":"replaces placeholder values"},{"Name":"basic","Description":"a starting point"}]`
 
-		if !cmp.Equal(writer.String(), expected) {
+		if !cmp.Equal(outWriter.String(), expected) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-				expected, writer.String(), cmp.Diff(expected, writer.String()))
+				expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 		}
 	})
 
@@ -378,12 +384,14 @@ what: now
 			"bizz",
 			"contributes",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expected := `- name: bizz
@@ -392,9 +400,9 @@ what: now
   description: contributes nothing
 `
 
-		if !cmp.Equal(writer.String(), expected) {
+		if !cmp.Equal(outWriter.String(), expected) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-				expected, writer.String(), cmp.Diff(expected, writer.String()))
+				expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 		}
 	})
 
@@ -408,19 +416,21 @@ what: now
 			"bizz",
 			"contributes",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		expected := `[{"Name":"bizz","Description":"adds an op"},{"Name":"empty","Description":"contributes nothing"}]`
 
-		if !cmp.Equal(writer.String(), expected) {
+		if !cmp.Equal(outWriter.String(), expected) {
 			t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-				expected, writer.String(), cmp.Diff(expected, writer.String()))
+				expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 		}
 	})
 
@@ -438,12 +448,14 @@ what: now
 				"-o=../../test/data/v2/ops_file_with_vars.yml",
 				"-v=value=lastbit",
 			)
-			writer := &test.StringWriter{}
-			cmd.Stdout = writer
+			outWriter := &test.StringWriter{}
+			errWriter := &test.StringWriter{}
+			cmd.Stdout = outWriter
+			cmd.Stderr = errWriter
 
 			err := cmd.Run()
 			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
+				t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 			}
 
 			expected := `- name: meta
@@ -518,9 +530,9 @@ what: now
       raw_args:
         - -v=value=lastbit
 `
-			if !cmp.Equal(writer.String(), expected) {
+			if !cmp.Equal(outWriter.String(), expected) {
 				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-					expected, writer.String(), cmp.Diff(expected, writer.String()))
+					expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 			}
 		})
 
@@ -537,12 +549,14 @@ what: now
 				"-o=../../test/data/v2/ops_file_with_vars.yml",
 				"-v=value=lastbit",
 			)
-			writer := &test.StringWriter{}
-			cmd.Stdout = writer
+			outWriter := &test.StringWriter{}
+			errWriter := &test.StringWriter{}
+			cmd.Stdout = outWriter
+			cmd.Stderr = errWriter
 
 			err := cmd.Run()
 			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
+				t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 			}
 
 			expected := `global:
@@ -623,9 +637,9 @@ steps:
         type: opsfile
 `
 
-			if !cmp.Equal(writer.String(), expected) {
+			if !cmp.Equal(outWriter.String(), expected) {
 				t.Errorf("Expected:\n'''%s'''\nActual:\n'''%s'''\nDiff:\n'''%s'''\n",
-					expected, writer.String(), cmp.Diff(expected, writer.String()))
+					expected, outWriter.String(), cmp.Diff(expected, outWriter.String()))
 			}
 		})
 
@@ -653,16 +667,21 @@ steps:
 			"../../test/data/v2/generated.yml",
 		)
 
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
+
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		cat := exec.Command(
 			"cat",
 			"../../test/data/v2/generated.yml",
 		)
-		outWriter := &test.StringWriter{}
+		outWriter = &test.StringWriter{}
 		cat.Stdout = outWriter
 
 		err = cat.Run()
@@ -739,16 +758,21 @@ steps:
 			"../../test/data/v2/generated.yml",
 		)
 
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
+
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		cat := exec.Command(
 			"cat",
 			"../../test/data/v2/generated.yml",
 		)
-		outWriter := &test.StringWriter{}
+		outWriter = &test.StringWriter{}
 		cat.Stdout = outWriter
 
 		err = cat.Run()
@@ -790,16 +814,21 @@ steps:
 			"../../test/data/v2/generated.yml",
 		)
 
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
+
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		cat := exec.Command(
 			"cat",
 			"../../test/data/v2/generated.yml",
 		)
-		outWriter := &test.StringWriter{}
+		outWriter = &test.StringWriter{}
 		cat.Stdout = outWriter
 
 		err = cat.Run()
@@ -930,16 +959,21 @@ scenarios:
 			"value=foo",
 		)
 
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
+
 		err = cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 
 		cat := exec.Command(
 			"cat",
 			"../../test/data/v2/generated.yml",
 		)
-		outWriter := &test.StringWriter{}
+		outWriter = &test.StringWriter{}
 		cat.Stdout = outWriter
 
 		err = cat.Run()
@@ -977,12 +1011,14 @@ scenarios:
 			"-l",
 			"../../test/data/v2/library.yml",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 	})
 
@@ -993,12 +1029,14 @@ scenarios:
 			"../../test/data/v2/library.yml",
 			"list",
 		)
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 	})
 
@@ -1008,12 +1046,14 @@ scenarios:
 			"list",
 		)
 		cmd.Env = append(os.Environ(), "MANIFER_LIBS=../../test/data/v2/library.yml")
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 	})
 
@@ -1023,12 +1063,14 @@ scenarios:
 			"list",
 		)
 		cmd.Env = append(os.Environ(), "MANIFER_LIB_PATH=../../test/data/v2")
-		writer := &test.StringWriter{}
-		cmd.Stdout = writer
+		outWriter := &test.StringWriter{}
+		errWriter := &test.StringWriter{}
+		cmd.Stdout = outWriter
+		cmd.Stderr = errWriter
 
 		err := cmd.Run()
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Unexpected error: %v\n%s", err, errWriter.String())
 		}
 	})
 }
