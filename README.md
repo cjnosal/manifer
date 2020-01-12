@@ -19,7 +19,7 @@ combine the library and template to compose the final document.
   `manifer import -r -p ./ops-dir -o ./new-lib.yml`  
 or  
 1b) generate a library from your yaml file  
-  `manifer generate -t ./template.yml -o ./new-lib.yml -d ./opsdir`  
+  `manifer generate -t ./template.yml -y opsfile -o ./new-lib.yml -d ./opsdir`  
 2) view the generated scenarios  
   `manifer list -l new-lib.yml`  
 3) add scenarios for your common use cases, which can define variables or invoke other scenarios  
