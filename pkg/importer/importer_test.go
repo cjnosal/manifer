@@ -14,6 +14,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 )
 
 type TestFileInfo struct {
@@ -35,8 +36,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, errors.New("oops"))
 
 		expectedErr := errors.New("oops\n  checking import path /in")
@@ -53,8 +56,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
 		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, errors.New("oops"))
 
@@ -72,13 +77,14 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
 		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, nil)
 
 		expectedLib := &library.Library{
-			Type:      library.OpsFile,
 			Scenarios: []library.Scenario{},
 		}
 		lib, err := subject.Import(library.OpsFile, "/in", true, "/dir/out")
@@ -97,8 +103,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
 		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("", errors.New("oops"))
@@ -117,14 +125,15 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
 		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("../in", nil)
 
 		expectedLib := &library.Library{
-			Type: library.OpsFile,
 			Scenarios: []library.Scenario{
 				{
 					Name:        "in",
@@ -132,6 +141,9 @@ func TestImport(t *testing.T) {
 					Snippets: []library.Snippet{
 						library.Snippet{
 							Path: "../in",
+							Processor: library.Processor{
+								Type: library.OpsFile,
+							},
 						},
 					},
 				},
@@ -153,8 +165,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Return(errors.New("oops"))
 
@@ -172,8 +186,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", nil, errors.New("oops"))
@@ -193,8 +209,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", &TestFileInfo{dir: true}, nil)
@@ -214,8 +232,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", &TestFileInfo{dir: true}, nil)
@@ -234,8 +254,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(false, errors.New("oops"))
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -256,8 +278,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("f", "/dir").Times(1).Return("", errors.New("oops"))
@@ -280,8 +304,10 @@ func TestImport(t *testing.T) {
 
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
-		subject := NewImporter(mockFile, mockProcessor)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
+		subject := NewImporter(mockFile, mockProcessorFactory)
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
 		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
 		mockProcessor.EXPECT().ValidateSnippet("g").Times(1).Return(false, nil)
@@ -306,7 +332,6 @@ func TestImport(t *testing.T) {
 		})
 
 		expectedLib := &library.Library{
-			Type: library.OpsFile,
 			Scenarios: []library.Scenario{
 				{
 					Name:        "f",
@@ -314,6 +339,9 @@ func TestImport(t *testing.T) {
 					Snippets: []library.Snippet{
 						library.Snippet{
 							Path: "../f",
+							Processor: library.Processor{
+								Type: library.OpsFile,
+							},
 						},
 					},
 				},
@@ -323,6 +351,9 @@ func TestImport(t *testing.T) {
 					Snippets: []library.Snippet{
 						library.Snippet{
 							Path: "../h",
+							Processor: library.Processor{
+								Type: library.OpsFile,
+							},
 						},
 					},
 				},

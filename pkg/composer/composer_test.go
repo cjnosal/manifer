@@ -122,6 +122,7 @@ func TestCompose(t *testing.T) {
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, nil).Times(1).Return(planWithoutGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, snippetProcessor, planWithoutGlobals.Steps[0].FlattenParams(), planWithoutGlobals.Global).Times(1).Return(expectedOut, nil)
+
 		out, err := subject.Compose(taggedTemplate, libraries, scenarioNames, nil, false, false)
 
 		if err != nil {
@@ -166,6 +167,7 @@ func TestCompose(t *testing.T) {
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, snippetProcessor, planWithGlobals.Steps[0].FlattenParams(), planWithGlobals.Global).Times(1).Return([]byte("transient"), nil)
 		mockExecutor.EXPECT().Execute(false, false, &file.TaggedBytes{Tag: template, Bytes: []byte("transient")}, nil, nil, library.InterpolatorParams{}, planWithGlobals.Global).Times(1).Return(expectedOut, nil)
+
 		out, err := subject.Compose(taggedTemplate, libraries, scenarioNames, passthrough, false, false)
 
 		if err != nil {
@@ -276,11 +278,13 @@ func TestCompose(t *testing.T) {
 		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
 		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Steps[0].Snippet, Bytes: []byte("op")}
 		snippetProcessor := &library.Processor{Type: library.OpsFile, Options: map[string]interface{}{}}
+
 		snippetError := errors.New("test")
 		expectedError := errors.New("test\n  while trying to apply snippet /snippet")
 
 		mockResolver.EXPECT().Resolve(libraries, scenarioNames, passthrough).Times(1).Return(planWithGlobals, nil)
 		mockFile.EXPECT().ReadAndTag(taggedSnippet.Tag).Times(1).Return(taggedSnippet, nil)
+
 		mockExecutor.EXPECT().Execute(false, false, taggedTemplate, taggedSnippet, snippetProcessor, planWithGlobals.Steps[0].FlattenParams(), planWithGlobals.Global).Times(1).Return(nil, snippetError)
 
 		_, err := subject.Compose(taggedTemplate, libraries, scenarioNames, passthrough, false, false)
@@ -314,6 +318,7 @@ func TestCompose(t *testing.T) {
 			}
 		template := "/tmp/base.yml"
 		taggedTemplate := &file.TaggedBytes{Tag: template, Bytes: []byte("in")}
+
 		taggedSnippet := &file.TaggedBytes{Tag: planWithoutGlobals.Steps[0].Snippet, Bytes: []byte("op")}
 		snippetProcessor := &library.Processor{Type: library.OpsFile, Options: map[string]interface{}{}}
 		intError := errors.New("test")

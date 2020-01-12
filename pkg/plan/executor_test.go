@@ -9,6 +9,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
@@ -22,18 +23,19 @@ func TestExecute(t *testing.T) {
 		mockDiff := diff.NewMockDiff(ctrl)
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Processor:    mockProcessor,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-			File:         mockFile,
-			Yaml:         mockYaml,
+			Diff:             mockDiff,
+			ProcessorFactory: mockProcessorFactory,
+			Interpolator:     mockInterpolator,
+			Output:           writer,
+			File:             mockFile,
+			Yaml:             mockYaml,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
@@ -59,6 +61,7 @@ func TestExecute(t *testing.T) {
 
 		mockInterpolator.EXPECT().Interpolate(snippet, library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs", "global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intSnippetBytes"), nil)
 		mockInterpolator.EXPECT().Interpolate(processedIn, library.InterpolatorParams{Vars: map[string]interface{}{"global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intTemplateBytes"), nil)
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return([]byte("bytes"), nil)
 		mockFile.EXPECT().ResolveRelativeFromWD("snippet").Times(1).Return("../snippet", nil)
 		mockYaml.EXPECT().Marshal(executorStep).Times(1).Return([]byte("yamlstep"), nil)
@@ -80,6 +83,7 @@ func TestExecute(t *testing.T) {
 	t.Run("Show diff", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
@@ -88,12 +92,12 @@ func TestExecute(t *testing.T) {
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Processor:    mockProcessor,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-			File:         mockFile,
-			Yaml:         mockYaml,
+			Diff:             mockDiff,
+			ProcessorFactory: mockProcessorFactory,
+			Interpolator:     mockInterpolator,
+			Output:           writer,
+			File:             mockFile,
+			Yaml:             mockYaml,
 		}
 
 		expectedDiff := "\nDiff:\ndiff"
@@ -115,6 +119,7 @@ func TestExecute(t *testing.T) {
 
 		mockInterpolator.EXPECT().Interpolate(snippet, library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs", "global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intSnippetBytes"), nil)
 		mockInterpolator.EXPECT().Interpolate(processedIn, library.InterpolatorParams{Vars: map[string]interface{}{"global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intTemplateBytes"), nil)
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return([]byte("bytes"), nil)
 		mockDiff.EXPECT().StringDiff("foo: bar", "intTemplateBytes").Times(1).Return("diff")
 
@@ -135,20 +140,20 @@ func TestExecute(t *testing.T) {
 	t.Run("Interpolate snippet error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
-		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Processor:    mockProcessor,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-			File:         mockFile,
-			Yaml:         mockYaml,
+			Diff:             mockDiff,
+			ProcessorFactory: mockProcessorFactory,
+			Interpolator:     mockInterpolator,
+			Output:           writer,
+			File:             mockFile,
+			Yaml:             mockYaml,
 		}
 
 		expectedError := errors.New("test\n  while trying to interpolate snippet")
@@ -183,16 +188,17 @@ func TestExecute(t *testing.T) {
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 		writer := &test.StringWriter{}
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Processor:    mockProcessor,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-			File:         mockFile,
-			Yaml:         mockYaml,
+			Diff:             mockDiff,
+			ProcessorFactory: mockProcessorFactory,
+			Interpolator:     mockInterpolator,
+			Output:           writer,
+			File:             mockFile,
+			Yaml:             mockYaml,
 		}
 
 		expectedError := errors.New("test\n  while trying to process template")
@@ -212,6 +218,7 @@ func TestExecute(t *testing.T) {
 		}
 
 		mockInterpolator.EXPECT().Interpolate(snippet, library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs", "global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intSnippetBytes"), nil)
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return(nil, errors.New("test"))
 
 		_, err := subject.Execute(false, false, in, snippet, snippetProcessor, snippetVars, globals)
@@ -225,6 +232,7 @@ func TestExecute(t *testing.T) {
 	t.Run("Interpolate template error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockDiff := diff.NewMockDiff(ctrl)
+		mockProcessorFactory := factory.NewMockProcessorFactory(ctrl)
 		mockProcessor := processor.NewMockProcessor(ctrl)
 		mockInterpolator := interpolator.NewMockInterpolator(ctrl)
 		mockFile := file.NewMockFileAccess(ctrl)
@@ -233,12 +241,12 @@ func TestExecute(t *testing.T) {
 		defer ctrl.Finish()
 
 		subject := &InterpolationExecutor{
-			Diff:         mockDiff,
-			Processor:    mockProcessor,
-			Interpolator: mockInterpolator,
-			Output:       writer,
-			File:         mockFile,
-			Yaml:         mockYaml,
+			Diff:             mockDiff,
+			ProcessorFactory: mockProcessorFactory,
+			Interpolator:     mockInterpolator,
+			Output:           writer,
+			File:             mockFile,
+			Yaml:             mockYaml,
 		}
 
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
@@ -260,6 +268,7 @@ func TestExecute(t *testing.T) {
 		mockInterpolator.EXPECT().Interpolate(snippet, library.InterpolatorParams{Vars: map[string]interface{}{"snippet": "sargs", "global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return([]byte("intSnippetBytes"), nil)
 		mockInterpolator.EXPECT().Interpolate(processedIn, library.InterpolatorParams{Vars: map[string]interface{}{"global": "gargs"}, RawArgs: []string{"-vfoo=bar"}}).Times(1).Return(nil, errors.New("test"))
 
+		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return([]byte("bytes"), nil)
 
 		expectedError := errors.New("test\n  while trying to interpolate template")

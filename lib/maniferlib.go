@@ -14,8 +14,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator/bosh"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
-	"github.com/cjnosal/manifer/pkg/processor"
-	"github.com/cjnosal/manifer/pkg/processor/opsfile"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 	"github.com/cjnosal/manifer/pkg/scenario"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -25,16 +24,49 @@ import (
 func NewManifer(logger io.Writer) Manifer {
 	fileIO := &file.FileIO{}
 	yaml := &yaml.Yaml{}
-	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, fileIO)
+	processorFactory := factory.NewProcessorFactory(yaml, fileIO)
+	importer := importer.NewImporter(fileIO, processorFactory)
+	loader := &library.Loader{
+		File: fileIO,
+		Yaml: yaml,
+	}
+	lister := &scenario.Lister{
+		Loader: loader,
+	}
+	patch := diffmatchpatch.New()
+	diff := &diff.FileDiff{
+		File:  fileIO,
+		Patch: patch,
+	}
+	interpolator := bosh.NewBoshInterpolator()
+	resolver := &composer.Resolver{
+		Loader:           loader,
+		ProcessorFactory: processorFactory,
+		Interpolator:     interpolator,
+	}
+	executor := &plan.InterpolationExecutor{
+		ProcessorFactory: processorFactory,
+		Interpolator:     interpolator,
+		Diff:             diff,
+		Output:           logger,
+		File:             fileIO,
+		Yaml:             yaml,
+	}
+	composer := &composer.ComposerImpl{
+		Resolver: resolver,
+		File:     fileIO,
+		Executor: executor,
+	}
+
 	return &libImpl{
-		composer:     newComposer(logger),
-		lister:       newLister(),
-		loader:       newLoader(),
+		composer:     composer,
+		lister:       lister,
+		loader:       loader,
 		file:         fileIO,
 		yaml:         yaml,
-		opProc:       opsFileProcessor,
-		importer:     importer.NewImporter(fileIO, opsFileProcessor),
-		interpolator: bosh.NewBoshInterpolator(),
+		procFact:     processorFactory,
+		importer:     importer,
+		interpolator: interpolator,
 	}
 }
 
@@ -59,9 +91,9 @@ type Manifer interface {
 
 	GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error)
 
-	GetSnippetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
+	GetSnippetScenarioNode(libType library.Type, passthroughArgs []string) (*library.ScenarioNode, []string, error)
 
-	GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error)
+	GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, []string, error)
 
 	Generate(libType library.Type, templatePath string, libPath string, snippetDir string) (*library.Library, error)
 
@@ -76,9 +108,9 @@ type libImpl struct {
 	loader       *library.Loader
 	file         *file.FileIO
 	yaml         yaml.YamlAccess
-	opProc       processor.Processor
 	importer     importer.Importer
 	interpolator interpolator.Interpolator
+	procFact     factory.ProcessorFactory
 }
 
 func (l *libImpl) Compose(
@@ -126,11 +158,19 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 	return node, nil
 }
 
-func (l *libImpl) GetSnippetScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
-	return l.opProc.ParsePassthroughFlags(passthroughArgs)
+func (l *libImpl) GetSnippetScenarioNode(libType library.Type, passthroughArgs []string) (*library.ScenarioNode, []string, error) {
+	processor, err := l.procFact.Create(libType)
+	if err != nil {
+		return nil, nil, err
+	}
+	node, remainder, err := processor.ParsePassthroughFlags(passthroughArgs)
+	if err != nil {
+		return nil, nil, err
+	}
+	return node, remainder, nil
 }
 
-func (l *libImpl) GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, error) {
+func (l *libImpl) GetVarScenarioNode(passthroughArgs []string) (*library.ScenarioNode, []string, error) {
 	return l.interpolator.ParsePassthroughVars(passthroughArgs)
 }
 
@@ -152,20 +192,25 @@ func (l *libImpl) Generate(libType library.Type, templatePath string, libPath st
 	if err != nil {
 		return nil, err
 	}
-	ops, err := l.opProc.GenerateSnippets(schemaBuilder.Root)
+
+	generator, err := l.procFact.CreateGenerator(libType)
+	if err != nil {
+		return nil, err
+	}
+	snippets, err := generator.GenerateSnippets(schemaBuilder.Root)
 	if err != nil {
 		return nil, err
 	}
 
 	// write snippets
-	for _, op := range ops {
-		snippetPath := filepath.Join(snippetDir, op.Tag)
+	for _, snippet := range snippets {
+		snippetPath := filepath.Join(snippetDir, snippet.Tag)
 		dir := filepath.Dir(snippetPath)
 		err = l.file.MkDir(dir)
 		if err != nil {
 			return nil, err
 		}
-		err = l.file.Write(snippetPath, op.Bytes, 0644)
+		err = l.file.Write(snippetPath, snippet.Bytes, 0644)
 		if err != nil {
 			return nil, err
 		}
@@ -197,21 +242,27 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 		})
 	}
 
-	node, err := l.GetSnippetScenarioNode(passthrough)
-	if err != nil {
-		return nil, err
+	snippets := []library.Snippet{}
+	for _, t := range library.Types {
+		node, remainder, err := l.GetSnippetScenarioNode(t, passthrough)
+		if err != nil {
+			return nil, err
+		}
+		if node != nil {
+			snippets = append(snippets, node.Snippets...)
+		}
+		passthrough = remainder
 	}
-	varnode, err := l.GetVarScenarioNode(passthrough)
+	varnode, remainder, err := l.GetVarScenarioNode(passthrough)
 	if err != nil {
 		return nil, err
 	}
 	args := library.InterpolatorParams{}
-	snippets := []library.Snippet{}
-	if node != nil {
-		snippets = node.Snippets
-	}
 	if varnode != nil {
 		args = varnode.GlobalInterpolator
+	}
+	if len(remainder) > 0 {
+		return nil, fmt.Errorf("Invalid passthrough arguments %v", remainder)
 	}
 
 	scenario := library.Scenario{
@@ -273,62 +324,4 @@ func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {
 	}
 	node.LibraryPath = rel
 	return nil
-}
-
-func newLoader() *library.Loader {
-	file := &file.FileIO{}
-	yaml := &yaml.Yaml{}
-
-	loader := &library.Loader{
-		File: file,
-		Yaml: yaml,
-	}
-	return loader
-}
-
-func newLister() scenario.ScenarioLister {
-	file := &file.FileIO{}
-	yaml := &yaml.Yaml{}
-
-	loader := &library.Loader{
-		File: file,
-		Yaml: yaml,
-	}
-	return &scenario.Lister{
-		Loader: loader,
-	}
-}
-
-func newComposer(logger io.Writer) composer.Composer {
-	file := &file.FileIO{}
-	yaml := &yaml.Yaml{}
-	patch := diffmatchpatch.New()
-	diff := &diff.FileDiff{
-		File:  file,
-		Patch: patch,
-	}
-	loader := &library.Loader{
-		File: file,
-		Yaml: yaml,
-	}
-	opsFileProcessor := opsfile.NewOpsFileProcessor(yaml, file)
-	boshInterpolator := bosh.NewBoshInterpolator()
-	resolver := &composer.Resolver{
-		Loader:          loader,
-		SnippetResolver: opsFileProcessor,
-		Interpolator:    boshInterpolator,
-	}
-	opsFileExecutor := &plan.InterpolationExecutor{
-		Processor:    opsFileProcessor,
-		Interpolator: boshInterpolator,
-		Diff:         diff,
-		Output:       logger,
-		File:         file,
-		Yaml:         yaml,
-	}
-	return &composer.ComposerImpl{
-		Resolver: resolver,
-		File:     file,
-		Executor: opsFileExecutor,
-	}
 }

@@ -97,29 +97,27 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params l
 	return outBytes, nil
 }
 
-func (i *boshInterpolator) ParsePassthroughVars(args []string) (*library.ScenarioNode, error) {
-	var node *library.ScenarioNode
-	if len(args) > 0 {
-		varFlags := boshopts.VarFlags{}
-		remainder, err := flags.NewParser(&varFlags, flags.IgnoreUnknown).ParseArgs(args)
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to parse vars", err)
-		}
-		varsArgs := remove(args, remainder)
-		params := library.InterpolatorParams{
-			RawArgs: varsArgs,
-		}
+func (i *boshInterpolator) ParsePassthroughVars(args []string) (*library.ScenarioNode, []string, error) {
+	varFlags := boshopts.VarFlags{}
+	remainder, err := flags.NewParser(&varFlags, flags.IgnoreUnknown).ParseArgs(args)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w\n  while trying to parse vars", err)
+	}
+	varsArgs := remove(args, remainder)
+	params := library.InterpolatorParams{
+		RawArgs: varsArgs,
+	}
 
-		if !params.IsZero() {
-			node = &library.ScenarioNode{
-				Name:               "passthrough variables",
-				Description:        "vars passed after --",
-				LibraryPath:        "<cli>",
-				GlobalInterpolator: params,
-			}
+	var node *library.ScenarioNode
+	if !params.IsZero() {
+		node = &library.ScenarioNode{
+			Name:               "passthrough variables",
+			Description:        "vars passed after --",
+			LibraryPath:        "<cli>",
+			GlobalInterpolator: params,
 		}
 	}
-	return node, nil
+	return node, remainder, nil
 }
 
 func remove(source []string, discard []string) []string {

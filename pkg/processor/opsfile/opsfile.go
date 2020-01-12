@@ -13,20 +13,15 @@ import (
 )
 
 func NewOpsFileProcessor(y yaml.YamlAccess, f file.FileAccess) processor.Processor {
-	g := &opFileGenerator{
-		yaml: y,
-	}
 	return &opFileProcessor{
-		yaml:      y,
-		file:      f,
-		generator: g,
+		yaml: y,
+		file: f,
 	}
 }
 
 type opFileProcessor struct {
-	yaml      yaml.YamlAccess
-	file      file.FileAccess
-	generator *opFileGenerator
+	yaml yaml.YamlAccess
+	file file.FileAccess
 }
 
 type opFlags struct {
@@ -47,44 +42,42 @@ func (i *opFileProcessor) ValidateSnippet(path string) (bool, error) {
 	return err == nil, nil
 }
 
-func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.ScenarioNode, error) {
+func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.ScenarioNode, []string, error) {
 	var node *library.ScenarioNode
-	if len(args) > 0 {
-		opFlags := opFlags{}
-		_, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
-		if err != nil {
-			return nil, fmt.Errorf("%w\n  while trying to parse opsfile args", err)
+	opFlags := opFlags{}
+	remainder, err := flags.NewParser(&opFlags, flags.IgnoreUnknown).ParseArgs(args)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w\n  while trying to parse opsfile args", err)
+	}
+	if len(opFlags.Oppaths) > 0 || opFlags.Path != "" {
+		snippets := []library.Snippet{}
+		for _, o := range opFlags.Oppaths {
+			snippets = append(snippets, library.Snippet{
+				Path: o,
+				Processor: library.Processor{
+					Type:    library.OpsFile,
+					Options: map[string]interface{}{},
+				},
+			})
 		}
-		if len(opFlags.Oppaths) > 0 || opFlags.Path != "" {
-			snippets := []library.Snippet{}
-			for _, o := range opFlags.Oppaths {
-				snippets = append(snippets, library.Snippet{
-					Path: o,
-					Processor: library.Processor{
-						Type:    library.OpsFile,
-						Options: map[string]interface{}{},
+		if opFlags.Path != "" {
+			snippets = append(snippets, library.Snippet{
+				Processor: library.Processor{
+					Type: library.OpsFile,
+					Options: map[string]interface{}{
+						"path": opFlags.Path,
 					},
-				})
-			}
-			if opFlags.Path != "" {
-				snippets = append(snippets, library.Snippet{
-					Processor: library.Processor{
-						Type: library.OpsFile,
-						Options: map[string]interface{}{
-							"path": opFlags.Path,
-						},
-					},
-				})
-			}
-			node = &library.ScenarioNode{
-				Name:        "passthrough",
-				Description: "args passed after --",
-				LibraryPath: "<cli>",
-				Snippets:    snippets,
-			}
+				},
+			})
+		}
+		node = &library.ScenarioNode{
+			Name:        "passthrough opsfile",
+			Description: "args passed after --",
+			LibraryPath: "<cli>",
+			Snippets:    snippets,
 		}
 	}
-	return node, nil
+	return node, remainder, nil
 }
 
 func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, options map[string]interface{}) ([]byte, error) {
@@ -105,7 +98,10 @@ func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snipp
 
 	var findPath string
 	if options != nil {
-		findPath = options["path"].(string)
+		pathInterface := options["path"]
+		if pathInterface != nil {
+			findPath = pathInterface.(string)
+		}
 	}
 
 	if len(ops) == 0 && findPath == "" {
@@ -139,8 +135,4 @@ func (i *opFileProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snipp
 	}
 
 	return outBytes, nil
-}
-
-func (i *opFileProcessor) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.TaggedBytes, error) {
-	return i.generator.generateSnippets(schema)
 }

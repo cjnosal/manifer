@@ -103,6 +103,8 @@ set: by_first
 
 		expectedErr := `
 snippet: ../../test/data/v2/placeholder_opsfile.yml
+processor:
+    type: opsfile
 interpolator:
     vars:
         path1: /fixed?
@@ -119,6 +121,8 @@ interpolator:
       - ../../test/data/v2/vars.yml
 
 snippet: ../../test/data/v2/placeholder_opsfile.yml
+processor:
+    type: opsfile
 interpolator:
     vars:
         path1: /fixed?
@@ -134,6 +138,8 @@ interpolator:
       - ../../test/data/v2/vars.yml
 
 snippet: ../../test/data/v2/placeholder_opsfile.yml
+processor:
+    type: opsfile
 interpolator:
     vars:
         path1: /fixed?
@@ -163,7 +169,7 @@ interpolator:
 		}
 	})
 
-	t.Run("TestCompose show plan", func(t *testing.T) {
+	t.Run("TestCompose show diff", func(t *testing.T) {
 		cmd := exec.Command(
 			"../../manifer",
 			"compose",
@@ -455,6 +461,8 @@ what: now
                   value1: a
                   value2: b
                   value3: c
+          processor:
+              type: opsfile
     - name: placeholder
       description: replaces placeholder values
       library_path: ../../test/data/v2/library.yml
@@ -468,11 +476,15 @@ what: now
               vars:
                   path2: /set?
                   value2: by_first
+          processor:
+              type: opsfile
         - path: ../../test/data/v2/placeholder_opsfile.yml
           interpolator:
               vars:
                   path2: /reused?
                   value2: by_second
+          processor:
+              type: opsfile
       dependencies:
         - name: basic
           description: a starting point
@@ -490,7 +502,9 @@ what: now
                   vars:
                       path2: /base2?
                       path3: /base3?
-- name: passthrough
+              processor:
+                  type: opsfile
+- name: passthrough opsfile
   description: args passed after --
   library_path: <cli>
   snippets:
@@ -548,6 +562,8 @@ steps:
                 value3: c
       - tag: base
       - tag: meta
+    processor:
+        type: opsfile
   - snippet: ../../test/data/v2/placeholder_opsfile.yml
     params:
       - tag: snippet
@@ -567,6 +583,8 @@ steps:
                 path1: /fixed?
                 value1: from_scenario
       - tag: meta
+    processor:
+        type: opsfile
   - snippet: ../../test/data/v2/placeholder_opsfile.yml
     params:
       - tag: snippet
@@ -580,6 +598,8 @@ steps:
                 path1: /fixed?
                 value1: from_scenario
       - tag: meta
+    processor:
+        type: opsfile
   - snippet: ../../test/data/v2/placeholder_opsfile.yml
     params:
       - tag: snippet
@@ -593,10 +613,12 @@ steps:
                 path1: /fixed?
                 value1: from_scenario
       - tag: meta
+    processor:
+        type: opsfile
   - snippet: ../../test/data/v2/ops_file_with_vars.yml
     params:
       - tag: snippet
-      - tag: passthrough
+      - tag: passthrough opsfile
     processor:
         type: opsfile
 `
@@ -646,36 +668,49 @@ steps:
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		expectedOut := `type: opsfile
-scenarios:
+		expectedOut := `scenarios:
   - name: add_scenario
     description: imported from add_scenario.yml
     snippets:
       - path: generated_ops/add_scenario.yml
+        processor:
+            type: opsfile
   - name: add_snippet
     description: imported from add_snippet.yml
     snippets:
       - path: generated_ops/scenario/add_snippet.yml
+        processor:
+            type: opsfile
   - name: set_snippet
     description: imported from set_snippet.yml
     snippets:
       - path: generated_ops/scenario/set_snippet.yml
+        processor:
+            type: opsfile
   - name: set_vars
     description: imported from set_vars.yml
     snippets:
       - path: generated_ops/scenario/snippet/interpolator/set_vars.yml
+        processor:
+            type: opsfile
   - name: set_interpolator
     description: imported from set_interpolator.yml
     snippets:
       - path: generated_ops/scenario/snippet/set_interpolator.yml
+        processor:
+            type: opsfile
   - name: set_scenario
     description: imported from set_scenario.yml
     snippets:
       - path: generated_ops/set_scenario.yml
+        processor:
+            type: opsfile
   - name: set_type
     description: imported from set_type.yml
     snippets:
       - path: generated_ops/set_type.yml
+        processor:
+            type: opsfile
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {
@@ -719,12 +754,13 @@ scenarios:
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		expectedOut := `type: opsfile
-scenarios:
+		expectedOut := `scenarios:
   - name: opsfile
     description: imported from opsfile.yml
     snippets:
       - path: opsfile.yml
+        processor:
+            type: opsfile
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {
@@ -769,24 +805,31 @@ scenarios:
 			t.Errorf("Unexpected error: %v", err)
 		}
 
-		expectedOut := `type: opsfile
-scenarios:
+		expectedOut := `scenarios:
   - name: empty_opsfile
     description: imported from empty_opsfile.yml
     snippets:
       - path: empty_opsfile.yml
+        processor:
+            type: opsfile
   - name: opsfile
     description: imported from opsfile.yml
     snippets:
       - path: opsfile.yml
+        processor:
+            type: opsfile
   - name: opsfile_with_vars
     description: imported from opsfile_with_vars.yml
     snippets:
       - path: opsfile_with_vars.yml
+        processor:
+            type: opsfile
   - name: placeholder_opsfile
     description: imported from placeholder_opsfile.yml
     snippets:
       - path: placeholder_opsfile.yml
+        processor:
+            type: opsfile
 `
 
 		if !cmp.Equal(outWriter.String(), expectedOut) {

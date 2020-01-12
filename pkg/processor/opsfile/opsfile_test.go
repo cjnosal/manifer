@@ -31,14 +31,14 @@ func TestParsePassthroughFlags(t *testing.T) {
 	t.Run("op files", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-ofoo", "-o", "bar", "--ops-file=bizz"}
-		node, err := subject.ParsePassthroughFlags(flags)
+		node, remainder, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
 		expectedNode := &library.ScenarioNode{
-			Name:        "passthrough",
+			Name:        "passthrough opsfile",
 			Description: "args passed after --",
 			LibraryPath: "<cli>",
 			Snippets: []library.Snippet{
@@ -68,19 +68,24 @@ func TestParsePassthroughFlags(t *testing.T) {
 		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
+
+		expectedRemainder := []string{}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("find path", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"--path", "/foo/bar"}
-		node, err := subject.ParsePassthroughFlags(flags)
+		node, remainder, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
 		expectedNode := &library.ScenarioNode{
-			Name:        "passthrough",
+			Name:        "passthrough opsfile",
 			Description: "args passed after --",
 			LibraryPath: "<cli>",
 			Snippets: []library.Snippet{
@@ -98,19 +103,24 @@ func TestParsePassthroughFlags(t *testing.T) {
 		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
+
+		expectedRemainder := []string{}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("ignore other flags", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-ofoo", "-vbar"}
-		node, err := subject.ParsePassthroughFlags(flags)
+		node, remainder, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
 		expectedNode := &library.ScenarioNode{
-			Name:        "passthrough",
+			Name:        "passthrough opsfile",
 			Description: "args passed after --",
 			LibraryPath: "<cli>",
 			Snippets: []library.Snippet{
@@ -126,12 +136,17 @@ func TestParsePassthroughFlags(t *testing.T) {
 		if !cmp.Equal(*expectedNode, *node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", *expectedNode, *node)
 		}
+
+		expectedRemainder := []string{"-vbar"}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("no snippets or path", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-vbar"}
-		node, err := subject.ParsePassthroughFlags(flags)
+		node, remainder, err := subject.ParsePassthroughFlags(flags)
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -141,12 +156,17 @@ func TestParsePassthroughFlags(t *testing.T) {
 		if !cmp.Equal(expectedNode, node) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedNode, node)
 		}
+
+		expectedRemainder := []string{"-vbar"}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("parse error", func(t *testing.T) {
 		subject := opFileProcessor{}
 		flags := []string{"-o"}
-		_, err := subject.ParsePassthroughFlags(flags)
+		_, _, err := subject.ParsePassthroughFlags(flags)
 
 		expectedError := "expected argument for flag `-o, --ops-file'\n  while trying to parse opsfile args"
 		if err == nil || err.Error() != expectedError {

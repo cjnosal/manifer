@@ -6,7 +6,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/plan"
-	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 )
 
 type ScenarioResolver interface {
@@ -14,9 +14,9 @@ type ScenarioResolver interface {
 }
 
 type Resolver struct {
-	Loader          library.LibraryLoader
-	SnippetResolver processor.Processor
-	Interpolator    interpolator.Interpolator
+	Loader           library.LibraryLoader
+	ProcessorFactory factory.ProcessorFactory
+	Interpolator     interpolator.Interpolator
 }
 
 func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthrough []string) (*plan.Plan, error) {
@@ -25,7 +25,7 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthroug
 		return nil, fmt.Errorf("%w\n  while trying to load libraries", err)
 	}
 
-	nodes := []*library.ScenarioNode{}
+	nodes := library.ScenarioNodes{}
 	for _, scenarioName := range scenarioNames {
 		node, err := libraries.GetScenarioTree(scenarioName)
 		if err != nil {
@@ -33,19 +33,30 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthroug
 		}
 		nodes = append(nodes, node)
 	}
-	passthroughNode, err := r.SnippetResolver.ParsePassthroughFlags(passthrough)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to parse passthrough args", err)
+
+	for _, t := range library.Types {
+		processor, err := r.ProcessorFactory.Create(t)
+		if err != nil {
+			return nil, err
+		}
+		passthroughNode, remainder, err := processor.ParsePassthroughFlags(passthrough)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to parse %s passthrough args", err, t)
+		}
+		passthrough = remainder
+		if passthroughNode != nil {
+			nodes = append(nodes, passthroughNode)
+		}
 	}
-	if passthroughNode != nil {
-		nodes = append(nodes, passthroughNode)
-	}
-	passthroughVars, err := r.Interpolator.ParsePassthroughVars(passthrough)
+	passthroughVars, remainder, err := r.Interpolator.ParsePassthroughVars(passthrough)
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  while trying to parse passthrough vars", err)
 	}
 	if passthroughVars != nil {
 		nodes = append(nodes, passthroughVars)
+	}
+	if len(remainder) > 0 {
+		return nil, fmt.Errorf("Invalid passthrough arguments %v", remainder)
 	}
 	executionPlan := &plan.Plan{
 		Global: library.InterpolatorParams{

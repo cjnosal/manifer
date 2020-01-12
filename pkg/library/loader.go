@@ -11,6 +11,8 @@ type LibraryLoader interface {
 	Load(paths []string) (*LoadedLibrary, error)
 }
 
+type ScenarioNodes []*ScenarioNode
+
 type Loader struct {
 	Yaml yaml.YamlAccess
 	File file.FileAccess
@@ -29,7 +31,24 @@ type ScenarioNode struct {
 	RefInterpolator    InterpolatorParams `yaml:"ref_interpolator,omitempty"`
 	Interpolator       InterpolatorParams `yaml:"interpolator,omitempty"`
 	Snippets           []Snippet          `yaml:"snippets,omitempty"`
-	Dependencies       []*ScenarioNode    `yaml:"dependencies,omitempty"`
+	Dependencies       ScenarioNodes      `yaml:"dependencies,omitempty"`
+}
+
+func (s *ScenarioNode) GetProcessorTypes() []Type {
+	types := []Type{}
+	for _, snippet := range s.Snippets {
+		types = insert(types, snippet.Processor.Type)
+	}
+	types = merge(types, s.Dependencies.GetProcessorTypes())
+	return types
+}
+
+func (n ScenarioNodes) GetProcessorTypes() []Type {
+	types := []Type{}
+	for _, node := range n {
+		types = merge(types, node.GetProcessorTypes())
+	}
+	return types
 }
 
 func (l *LoadedLibrary) GetScenarioTree(name string) (*ScenarioNode, error) {
@@ -54,6 +73,11 @@ func (l *LoadedLibrary) getScenarioNode(name string, refInterpolator Interpolato
 			return nil, fmt.Errorf("%w\n  while finding scenario %s", err, name)
 		}
 		deps = append(deps, node)
+	}
+	for i, snippet := range scenario.Snippets {
+		if snippet.Processor.Type == "" {
+			scenario.Snippets[i].Processor.Type = lib.Type
+		}
 	}
 	scenarioNode := &ScenarioNode{
 		Name:               scenario.Name,
@@ -183,4 +207,27 @@ func (l *Loader) loadLib(path string, loaded *LoadedLibrary, top bool) error {
 
 func SplitName(scenarioName string) []string {
 	return strings.Split(scenarioName, ".")
+}
+
+func contains(collection []Type, value Type) bool {
+	for _, c := range collection {
+		if c == value {
+			return true
+		}
+	}
+	return false
+}
+
+func merge(a []Type, b []Type) []Type {
+	for _, t := range b {
+		a = insert(a, t)
+	}
+	return a
+}
+
+func insert(a []Type, b Type) []Type {
+	if !contains(a, b) {
+		a = append(a, b)
+	}
+	return a
 }

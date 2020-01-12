@@ -45,128 +45,120 @@ In order of precedence:
 ## import
 ```
 ./manifer import [--recursive] --path <import path> --out <library path>:
-  create a library from a directory of opsfiles.
-  -o string
-        Path to save generated library file
-  -out string
-        Path to save generated library file
-  -p string
-        Directory or opsfile to import
-  -path string
-        Directory or opsfile to import
-  -r    Import opsfiles from subdirectories
-  -recursive
-        Import opsfiles from subdirectories
+  create a library from a directory of snippets.
+
+Usage:
+  manifer import [flags]
+
+Flags:
+  -h, --help               help for import
+  -o, --out string         Path to save generated library file
+  -p, --path string        Directory or snippet to import
+  -r, --recursive          Import snippets from subdirectories
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## generate
 ```
 ./manifer generate --template <yaml path> --out <library path> [--directory <snippet path>]:
   create a library based on the structure of a yaml file.
-  -d string
-        Directory to save generated snippets (default out/ops)
-  -directory string
-        Directory to save generated snippets (default out/ops)
-  -o string
-        Path to save generated library file
-  -out string
-        Path to save generated library file
-  -t string
-        Template to generate from
-  -template string
-        Template to generate from
+
+Usage:
+  manifer generate [flags]
+
+Flags:
+  -d, --directory string   Directory to save generated snippets (default out/snippets)
+  -h, --help               help for generate
+  -o, --out string         Path to save generated library file
+  -t, --template string    Template to generate from
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## add
 ```
 ./manifer add --library <library path> --name <scenario name> [--description <text>] [--scenario <dependency>...] [-- passthrough flags ...]:
   add a new scenario to a library.
-  -d string
-        Informative description of the new scenario
-  -description string
-        Informative description of the new scenario
-  -l string
-        Path to library file
-  -library string
-        Path to library file
-  -n string
-        Name to identify the new scenario
-  -name string
-        Name to identify the new scenario
-  -s value
-        Dependency of the new scenario
-  -scenario value
-        Dependency of the new scenario
+
+Usage:
+  manifer add [flags]
+
+Flags:
+  -d, --description string   Informative description of the new scenario
+  -h, --help                 help for add
+  -n, --name string          Name to identify the new scenario
+  -s, --scenario strings     Dependency of the new scenario
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## list
 ```
 ./manifer list [--all] (--library <library path>...):
   list scenarios in selected libraries.
-  -a    Include all referenced libraries
-  -all
-        Include all referenced libraries
-  -j    Print output in json format
-  -json
-        Print output in json format
-  -l value
-        Path to library file
-  -library value
-        Path to library file
+
+Usage:
+  manifer list [flags]
+
+Flags:
+  -a, --allScenarios   Include all referenced libraries
+  -h, --help           help for list
+  -j, --json           Print output in json format
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## search
 ```
 ./manifer search (--library <library path>...) (query...):
   search scenarios in selected libraries by name and description.
-  -j    Print output in json format
-  -json
-        Print output in json format
-  -l value
-        Path to library file
-  -library value
-        Path to library file
+
+Usage:
+  manifer search [flags]
+
+Flags:
+  -h, --help   help for search
+  -j, --json   Print output in json format
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## inspect
 ```
 ./manifer inspect (--library <library path>...) [--tree|--plan] (-s <scenario name>...) [-- passthrough flags ...]:
   inspect scenarios as a dependency tree or execution plan.
-  -j    Print output in json format
-  -json
-        Print output in json format
-  -l value
-        Path to library file
-  -library value
-        Path to library file
-  -p    Print execution plan
-  -plan
-        Print execution plan
-  -s value
-        Scenario name in library
-  -scenario value
-        Scenario name in library
-  -t    Print dependency tree (default)
-  -tree
-        Print dependency tree (default)
+
+Usage:
+  manifer inspect [flags]
+
+Flags:
+  -h, --help               help for inspect
+  -j, --json               Print output in json format
+  -p, --plan               Print execution plan
+  -s, --scenario strings   Scenario name in library
+  -t, --tree               Print dependency tree (default)
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ## compose
 ```
 ./manifer compose --template <template path> (--library <library path>...) (--scenario <scenario>...) [--print] [--diff] [-- passthrough flags ...] [\;] :
   compose a yml file from snippets. Use '\;' as a separator when reusing a scenario with different variables.
-  -d    Show diff after each snippet is applied
-  -diff
-        Show diff after each snippet is applied
-  -l value
-        Path to library file
-  -library value
-        Path to library file
-  -p    Show snippets and arguments being applied
-  -print
-        Show snippets and arguments being applied
-  -s value
-        Scenario name in library
-  -scenario value
-        Scenario name in library
-  -t string
-        Path to initial template file
-  -template string
-        Path to initial template file
+
+Usage:
+  manifer compose [flags]
+
+Flags:
+  -d, --diff               Show diff after each snippet is applied
+  -h, --help               help for compose
+  -p, --print              Show snippets and arguments being applied
+  -s, --scenario strings   Scenario name in library
+  -t, --template string    Path to initial template file
+
+Global Flags:
+  -l, --library strings   Path to library file
 ```
 ### appending additional compositions
 Additional compositions can be appended using `\;` as a separator. For each additional composition:
@@ -190,7 +182,7 @@ The following invocations are equivalent:
 # schemas
 
 ## template
-Any valid yaml document you would like to modify with opsfiles and [implicit bosh variables](https://bosh.io/docs/cli-int/#implicit)
+Any valid yaml document you would like to modify with snippets and [implicit bosh variables](https://bosh.io/docs/cli-int/#implicit)
 
 e.g. foo-template.yml
 ```
@@ -357,7 +349,7 @@ func main() {
   // collection of scenarios
   libraries := []string{"test/data/v2/library.yml"}
 
-  // sets of ops files to apply
+  // sets of snippets to apply
   scenarios := []string{"placeholder"}
 
   // arguments to pass through to `bosh interpolate`
@@ -368,7 +360,7 @@ func main() {
   logger.Write([]byte(fmt.Sprintf("%v\n", scenarioSummary)))
   logger.Write([]byte(fmt.Sprintf("%v\n", err)))
 
-  // apply ops files from the selected scenarios to the provided template
+  // apply snippets from the selected scenarios to the provided template
   composedYaml, err := manifer.Compose(template, libraries, scenarios, interpolationVars, false, false)
   output.Write(composedYaml)
   logger.Write([]byte(fmt.Sprintf("%v\n", err)))

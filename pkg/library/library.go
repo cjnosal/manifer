@@ -6,6 +6,10 @@ const (
 	OpsFile Type = "opsfile"
 )
 
+var (
+	Types []Type = []Type{OpsFile} // treat as const
+)
+
 type Library struct {
 	Libraries []LibraryRef `yaml:"libraries,omitempty"`
 	Type      Type         `yaml:"type,omitempty"`

@@ -65,7 +65,7 @@ func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	nodes := []*library.ScenarioNode{}
+	nodes := library.ScenarioNodes{}
 	for _, name := range p.scenarios {
 		node, err := p.manifer.GetScenarioTree(libraryPaths, name)
 		if err != nil {
@@ -74,15 +74,18 @@ func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 		}
 		nodes = append(nodes, node)
 	}
-	passthroughNode, err := p.manifer.GetSnippetScenarioNode(args)
-	if err != nil {
-		p.logger.Printf("%v\n  while trying to parse passthrough args", err)
-		os.Exit(1)
+	for _, t := range library.Types {
+		passthroughNode, remainder, err := p.manifer.GetSnippetScenarioNode(t, args)
+		if err != nil {
+			p.logger.Printf("%v\n  while trying to parse passthrough args", err)
+			os.Exit(1)
+		}
+		args = remainder
+		if passthroughNode != nil {
+			nodes = append(nodes, passthroughNode)
+		}
 	}
-	if passthroughNode != nil {
-		nodes = append(nodes, passthroughNode)
-	}
-	varNode, err := p.manifer.GetVarScenarioNode(args)
+	varNode, remainder, err := p.manifer.GetVarScenarioNode(args)
 	if err != nil {
 		p.logger.Printf("%v\n  while trying to parse variable args", err)
 		os.Exit(1)
@@ -90,10 +93,24 @@ func (p *inspectCmd) execute(cmd *cobra.Command, args []string) {
 	if varNode != nil {
 		nodes = append(nodes, varNode)
 	}
+	if len(remainder) > 0 {
+		p.logger.Printf("Invalid passthrough arguments %v", args)
+		os.Exit(1)
+	}
 
 	var outBytes []byte
 	if p.printPlan {
-		executionPlan := &plan.Plan{}
+		executionPlan := &plan.Plan{
+			Global: library.InterpolatorParams{
+				Vars:      map[string]interface{}{},
+				VarFiles:  map[string]string{},
+				VarsFiles: []string{},
+				VarsEnv:   []string{},
+				VarsStore: "",
+				RawArgs:   []string{},
+			},
+			Steps: []*plan.Step{},
+		}
 		for _, node := range nodes {
 			executionPlan = plan.Append(executionPlan, plan.FromScenarioTree(node))
 		}

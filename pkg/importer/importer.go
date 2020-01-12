@@ -5,6 +5,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/library"
 	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,33 +17,34 @@ type Importer interface {
 
 type libraryImporter struct {
 	fileIO    file.FileAccess
-	validator processor.Processor
+	validator factory.ProcessorFactory
 }
 
-func NewImporter(fileIO file.FileAccess, validator processor.Processor) Importer {
+func NewImporter(fileIO file.FileAccess, procFact factory.ProcessorFactory) Importer {
 	return &libraryImporter{
 		fileIO:    fileIO,
-		validator: validator,
+		validator: procFact,
 	}
 }
 
 func (l *libraryImporter) Import(libType library.Type, path string, recursive bool, outPath string) (*library.Library, error) {
-	lib := &library.Library{
-		Type: libType,
+	lib := &library.Library{}
+	validator, err := l.validator.Create(libType)
+	if err != nil {
+		return nil, err
 	}
-
 	isDir, err := l.fileIO.IsDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  checking import path %s", err, path)
 	}
 	if isDir {
-		scenarios, err := l.importDir(path, recursive, outPath)
+		scenarios, err := l.importDir(validator, libType, path, recursive, outPath)
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  importing directory %s", err, path)
 		}
 		lib.Scenarios = scenarios
 	} else {
-		scenario, err := l.importFile(path, filepath.Dir(outPath))
+		scenario, err := l.importFile(validator, libType, path, filepath.Dir(outPath))
 		if err != nil {
 			return nil, fmt.Errorf("%w\n  importing file %s", err, path)
 		}
@@ -54,7 +56,7 @@ func (l *libraryImporter) Import(libType library.Type, path string, recursive bo
 	return lib, nil
 }
 
-func (l *libraryImporter) importDir(dirPath string, recursive bool, outPath string) ([]library.Scenario, error) {
+func (l *libraryImporter) importDir(validator processor.Processor, libType library.Type, dirPath string, recursive bool, outPath string) ([]library.Scenario, error) {
 	scenarios := []library.Scenario{}
 
 	err := l.fileIO.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
@@ -69,7 +71,7 @@ func (l *libraryImporter) importDir(dirPath string, recursive bool, outPath stri
 			}
 		}
 
-		scenario, err := l.importFile(path, filepath.Dir(outPath))
+		scenario, err := l.importFile(validator, libType, path, filepath.Dir(outPath))
 		if err != nil {
 			return fmt.Errorf("%w\n  importing file %s", err, path)
 		}
@@ -84,8 +86,8 @@ func (l *libraryImporter) importDir(dirPath string, recursive bool, outPath stri
 	return scenarios, nil
 }
 
-func (l *libraryImporter) importFile(path string, outPath string) (*library.Scenario, error) {
-	valid, err := l.validator.ValidateSnippet(path)
+func (l *libraryImporter) importFile(validator processor.Processor, libType library.Type, path string, outPath string) (*library.Scenario, error) {
+	valid, err := validator.ValidateSnippet(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  validating file %s", err, path)
 	}
@@ -109,6 +111,9 @@ func (l *libraryImporter) importFile(path string, outPath string) (*library.Scen
 		Snippets: []library.Snippet{
 			library.Snippet{
 				Path: relPath,
+				Processor: library.Processor{
+					Type: libType,
+				},
 			},
 		},
 	}, nil

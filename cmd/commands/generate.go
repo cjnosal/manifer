@@ -44,7 +44,7 @@ func NewGenerateCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command 
 
 	cobraGenerate.Flags().StringVarP(&generate.lib, "out", "o", "", "Path to save generated library file")
 	cobraGenerate.Flags().StringVarP(&generate.template, "template", "t", "", "Template to generate from")
-	cobraGenerate.Flags().StringVarP(&generate.dir, "directory", "d", "", "Directory to save generated snippets (default out/ops)")
+	cobraGenerate.Flags().StringVarP(&generate.dir, "directory", "d", "", "Directory to save generated snippets (default out/snippets)")
 
 	return cobraGenerate
 }
@@ -62,7 +62,7 @@ func (p *generateCmd) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	if len(p.dir) == 0 {
-		p.dir = filepath.Join(filepath.Dir(p.lib), "ops")
+		p.dir = filepath.Join(filepath.Dir(p.lib), "snippets")
 	}
 
 	lib, err := p.manifer.Generate(library.OpsFile, p.template, p.lib, p.dir)

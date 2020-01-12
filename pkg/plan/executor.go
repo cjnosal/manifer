@@ -6,7 +6,7 @@ import (
 	"github.com/cjnosal/manifer/pkg/file"
 	"github.com/cjnosal/manifer/pkg/interpolator"
 	"github.com/cjnosal/manifer/pkg/library"
-	"github.com/cjnosal/manifer/pkg/processor"
+	"github.com/cjnosal/manifer/pkg/processor/factory"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	"io"
 )
@@ -16,12 +16,12 @@ type Executor interface {
 }
 
 type InterpolationExecutor struct {
-	Processor    processor.Processor
-	Interpolator interpolator.Interpolator
-	Diff         diff.Diff
-	Output       io.Writer
-	File         file.FileAccess
-	Yaml         yaml.YamlAccess
+	ProcessorFactory factory.ProcessorFactory
+	Interpolator     interpolator.Interpolator
+	Diff             diff.Diff
+	Output           io.Writer
+	File             file.FileAccess
+	Yaml             yaml.YamlAccess
 }
 
 type ExecutorStep struct {
@@ -81,21 +81,25 @@ func (i *InterpolationExecutor) processSnippet(template *file.TaggedBytes, snipp
 		}
 	}
 
-	var processorOptions map[string]interface{}
 	if snippetProcessor != nil {
-		processorOptions = snippetProcessor.Options
-	}
-
-	processedBytes, err := i.Processor.ProcessTemplate(template, intSnippet, processorOptions)
-	if err != nil {
-		return nil, fmt.Errorf("%w\n  while trying to process template", err)
-	}
-	processedTemplate = &file.TaggedBytes{
-		Bytes: processedBytes,
-		Tag:   template.Tag,
+		processor, err := i.ProcessorFactory.Create(snippetProcessor.Type)
+		if err != nil {
+			return nil, err
+		}
+		processedBytes, err := processor.ProcessTemplate(template, intSnippet, snippetProcessor.Options)
+		if err != nil {
+			return nil, fmt.Errorf("%w\n  while trying to process template", err)
+		}
+		processedTemplate = &file.TaggedBytes{
+			Bytes: processedBytes,
+			Tag:   template.Tag,
+		}
+	} else {
+		processedTemplate = template
 	}
 
 	intTemplateBytes, err := i.Interpolator.Interpolate(processedTemplate, globals)
+
 	if err != nil {
 		return nil, fmt.Errorf("%w\n  while trying to interpolate template", err)
 	}

@@ -88,7 +88,7 @@ func TestInterpolate(t *testing.T) {
 func TestParsePassthroughVars(t *testing.T) {
 
 	t.Run("no args", func(t *testing.T) {
-		node, err := NewBoshInterpolator().ParsePassthroughVars([]string{})
+		node, remainder, err := NewBoshInterpolator().ParsePassthroughVars([]string{})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -98,10 +98,15 @@ func TestParsePassthroughVars(t *testing.T) {
 		if err == nil && !cmp.Equal(node, expectedNode) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedNode, node)
 		}
+
+		expectedRemainder := []string{}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("valid args", func(t *testing.T) {
-		node, err := NewBoshInterpolator().ParsePassthroughVars([]string{"-vbar=bizz"})
+		node, remainder, err := NewBoshInterpolator().ParsePassthroughVars([]string{"-vbar=bizz"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -118,10 +123,15 @@ func TestParsePassthroughVars(t *testing.T) {
 		if err == nil && !cmp.Equal(node, expectedNode) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedNode, node)
 		}
+
+		expectedRemainder := []string{}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
+		}
 	})
 
 	t.Run("ignore invalid arg", func(t *testing.T) {
-		node, err := NewBoshInterpolator().ParsePassthroughVars([]string{"--invalid"})
+		node, remainder, err := NewBoshInterpolator().ParsePassthroughVars([]string{"--invalid"})
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
@@ -130,6 +140,11 @@ func TestParsePassthroughVars(t *testing.T) {
 		var expectedNode *library.ScenarioNode
 		if err == nil && !cmp.Equal(node, expectedNode) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedNode, node)
+		}
+
+		expectedRemainder := []string{"--invalid"}
+		if err == nil && !cmp.Equal(remainder, expectedRemainder) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedRemainder, remainder)
 		}
 	})
 }

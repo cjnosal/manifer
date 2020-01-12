@@ -33,9 +33,9 @@ func NewImportCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
 
 	cobraImport := &cobra.Command{
 		Use:   "import",
-		Short: "create a library from a directory of opsfiles.",
+		Short: "create a library from a directory of snippets.",
 		Long: `import [--recursive] --path <import path> --out <library path>:
-  create a library from a directory of opsfiles.
+  create a library from a directory of snippets.
 `,
 		Run:              imp.execute,
 		TraverseChildren: true,
@@ -43,7 +43,7 @@ func NewImportCommand(l io.Writer, w io.Writer, m lib.Manifer) *cobra.Command {
 
 	cobraImport.Flags().StringVarP(&imp.out, "out", "o", "", "Path to save generated library file")
 	cobraImport.Flags().StringVarP(&imp.path, "path", "p", "", "Directory or opsfile to import")
-	cobraImport.Flags().BoolVarP(&imp.recursive, "recursive", "r", false, "Import opsfiles from subdirectories")
+	cobraImport.Flags().BoolVarP(&imp.recursive, "recursive", "r", false, "Import snippets from subdirectories")
 
 	return cobraImport
 }
@@ -61,11 +61,18 @@ func (p *importCmd) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	lib, err := p.manifer.Import(library.OpsFile, p.path, p.recursive, p.out)
+	lib := library.Library{}
+	for _, t := range library.Types {
+		tlib, err := p.manifer.Import(t, p.path, p.recursive, p.out)
 
-	if err != nil {
-		p.logger.Printf("%v\n  while generating library", err)
-		os.Exit(1)
+		if err != nil {
+			p.logger.Printf("%v\n  while importing %s snippets", err, t)
+			os.Exit(1)
+		}
+
+		// imported scenarios should specify processor type at snippet level,
+		// and import does not reference other libraries
+		lib.Scenarios = append(lib.Scenarios, tlib.Scenarios...)
 	}
 
 	yaml := &yaml.Yaml{}

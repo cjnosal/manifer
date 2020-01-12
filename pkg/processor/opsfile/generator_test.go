@@ -2,6 +2,7 @@ package opsfile
 
 import (
 	"errors"
+	"github.com/cjnosal/manifer/pkg/processor"
 	"github.com/cjnosal/manifer/pkg/yaml"
 	"github.com/cjnosal/manifer/test"
 	"github.com/golang/mock/gomock"
@@ -13,7 +14,10 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("GenerateSnippets", func(t *testing.T) {
-		subject := opFileGenerator{yaml: &yaml.Yaml{}}
+		subject := processor.NewSnippetGenerator(
+			&yaml.Yaml{},
+			&gopatchPathBuilder{},
+		)
 
 		schema := &yaml.SchemaNode{
 			Kind: y.SequenceNode,
@@ -52,7 +56,7 @@ func TestGenerate(t *testing.T) {
 			},
 		}
 
-		serializedOps, err := subject.generateSnippets(schema)
+		serializedOps, err := subject.GenerateSnippets(schema)
 		if err != nil {
 			t.Errorf("Unexpected error %w", err)
 		}
@@ -105,7 +109,10 @@ func TestGenerate(t *testing.T) {
 
 		mockYaml := yaml.NewMockYamlAccess(ctrl)
 		mockYaml.EXPECT().Marshal(gomock.Any()).Times(1).Return(nil, errors.New("oops"))
-		subject := opFileGenerator{yaml: mockYaml}
+		subject := processor.NewSnippetGenerator(
+			mockYaml,
+			&gopatchPathBuilder{},
+		)
 
 		schema := &yaml.SchemaNode{
 			Kind: y.MappingNode,
@@ -117,7 +124,7 @@ func TestGenerate(t *testing.T) {
 			},
 		}
 
-		_, err := subject.generateSnippets(schema)
+		_, err := subject.GenerateSnippets(schema)
 
 		expectedError := errors.New("oops\n  marshaling /foo?")
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
