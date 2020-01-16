@@ -29,7 +29,7 @@ find . -name *.go | grep -v test | grep -v mock | xargs -I{} bash -c "mock {}"
 # remove mock files for packages with no interfaces (unused gomock import)
 find . -name mock_*.go | xargs -I{} bash -c "grep -q NewMock {} || rm {}"
 
-TEST_ARGS="-count=1 ./cmd/... ./lib/... ./pkg/..."
+TEST_ARGS="-count=1 ./lib/... ./pkg/... ./cmd/..."
 if [ $# -gt 0 ]
 then
 	if [[ "$1" == "unit" ]]
