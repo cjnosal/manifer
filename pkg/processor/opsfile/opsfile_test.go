@@ -9,6 +9,7 @@ import (
 
 	"github.com/cjnosal/manifer/v2/pkg/file"
 	"github.com/cjnosal/manifer/v2/pkg/library"
+	"github.com/cjnosal/manifer/v2/pkg/processor"
 	"github.com/cjnosal/manifer/v2/pkg/yaml"
 	"github.com/cjnosal/manifer/v2/test"
 	"github.com/google/go-cmp/cmp"
@@ -185,17 +186,33 @@ func TestValidate(t *testing.T) {
 
 		subject := NewOpsFileProcessor(mockYaml, mockFile)
 
-		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
-		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(nil)
+		element := "/bar"
+		opDefs := []patch.OpDefinition{
+			patch.OpDefinition{
+				Path: &element,
+				Type: "replace",
+			},
+		}
 
-		valid, err := subject.ValidateSnippet("/foo")
+		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
+		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(nil).Do(func(bytes []byte, o *[]patch.OpDefinition) {
+			*o = opDefs
+		})
+
+		hint, err := subject.ValidateSnippet("/foo")
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
-		if !valid {
-			t.Errorf("Expected ValidateSnippet to return true")
+		expectedHint := processor.SnippetHint{
+			Valid:   true,
+			Element: "/bar",
+			Action:  "replace",
+		}
+
+		if !cmp.Equal(expectedHint, hint) {
+			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedHint, hint)
 		}
 	})
 
@@ -211,13 +228,13 @@ func TestValidate(t *testing.T) {
 		mockFile.EXPECT().Read("/foo").Times(1).Return([]byte{1}, nil)
 		mockYaml.EXPECT().Unmarshal([]byte{1}, &[]patch.OpDefinition{}).Times(1).Return(errors.New("oops"))
 
-		valid, err := subject.ValidateSnippet("/foo")
+		hint, err := subject.ValidateSnippet("/foo")
 
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}
 
-		if valid {
+		if hint.Valid {
 			t.Errorf("Expected ValidateSnippet to return false")
 		}
 	})
@@ -233,14 +250,14 @@ func TestValidate(t *testing.T) {
 
 		mockFile.EXPECT().Read("/foo").Times(1).Return(nil, errors.New("oops"))
 
-		valid, err := subject.ValidateSnippet("/foo")
+		hint, err := subject.ValidateSnippet("/foo")
 
 		expectedError := errors.New("oops\n  while validating opsfile /foo")
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
 		}
 
-		if valid {
+		if hint.Valid {
 			t.Errorf("Expected ValidateSnippet to return false")
 		}
 	})

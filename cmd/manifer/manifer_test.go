@@ -691,45 +691,49 @@ steps:
 
 		expectedOut := `scenarios:
   - name: add_scenario
-    description: imported from add_scenario.yml
+    description: replace /scenarios?/- (imported from generated_ops/add_scenario.yml)
     snippets:
       - path: generated_ops/add_scenario.yml
         processor:
             type: opsfile
   - name: add_snippet
-    description: imported from add_snippet.yml
+    description: replace /scenarios/((scenario_index))/snippets?/- (imported from
+        generated_ops/scenario/add_snippet.yml)
     snippets:
       - path: generated_ops/scenario/add_snippet.yml
         processor:
             type: opsfile
-  - name: set_snippet
-    description: imported from set_snippet.yml
-    snippets:
-      - path: generated_ops/scenario/set_snippet.yml
-        processor:
-            type: opsfile
-  - name: set_vars
-    description: imported from set_vars.yml
-    snippets:
-      - path: generated_ops/scenario/snippet/interpolator/set_vars.yml
-        processor:
-            type: opsfile
   - name: set_interpolator
-    description: imported from set_interpolator.yml
+    description: replace /scenarios/((scenario_index))/snippets/((snippet_index))/interpolator?
+        (imported from generated_ops/scenario/snippet/set_interpolator.yml)
     snippets:
       - path: generated_ops/scenario/snippet/set_interpolator.yml
         processor:
             type: opsfile
   - name: set_scenario
-    description: imported from set_scenario.yml
+    description: replace /scenarios/((scenario_index)) (imported from generated_ops/set_scenario.yml)
     snippets:
       - path: generated_ops/set_scenario.yml
         processor:
             type: opsfile
+  - name: set_snippet
+    description: replace /scenarios/((scenario_index))/snippets/((snippet_index))
+        (imported from generated_ops/scenario/set_snippet.yml)
+    snippets:
+      - path: generated_ops/scenario/set_snippet.yml
+        processor:
+            type: opsfile
   - name: set_type
-    description: imported from set_type.yml
+    description: replace /type? (imported from generated_ops/set_type.yml)
     snippets:
       - path: generated_ops/set_type.yml
+        processor:
+            type: opsfile
+  - name: set_vars
+    description: replace /scenarios/((scenario_index))/snippets/((snippet_index))/interpolator/vars?
+        (imported from generated_ops/scenario/snippet/interpolator/set_vars.yml)
+    snippets:
+      - path: generated_ops/scenario/snippet/interpolator/set_vars.yml
         processor:
             type: opsfile
 `
@@ -782,7 +786,7 @@ steps:
 
 		expectedOut := `scenarios:
   - name: opsfile
-    description: imported from opsfile.yml
+    description: replace /bizz? (imported from opsfile.yml)
     snippets:
       - path: opsfile.yml
         processor:
@@ -837,80 +841,74 @@ steps:
 		}
 
 		expectedOut := `scenarios:
-  - name: empty_opsfile
-    description: imported from empty_opsfile.yml
-    snippets:
-      - path: empty_opsfile.yml
-        processor:
-            type: opsfile
   - name: opsfile
-    description: imported from opsfile.yml
+    description: replace /bizz? (imported from opsfile.yml)
     snippets:
       - path: opsfile.yml
         processor:
             type: opsfile
   - name: opsfile_with_vars
-    description: imported from opsfile_with_vars.yml
+    description: replace /elsewhere? (imported from opsfile_with_vars.yml)
     snippets:
       - path: opsfile_with_vars.yml
         processor:
             type: opsfile
   - name: placeholder_opsfile
-    description: imported from placeholder_opsfile.yml
+    description: replace ((path1)) (imported from placeholder_opsfile.yml)
     snippets:
       - path: placeholder_opsfile.yml
         processor:
             type: opsfile
   - name: base_library
-    description: imported from base_library.yml
+    description: write type (imported from base_library.yml)
     snippets:
       - path: base_library.yml
         processor:
             type: yq
   - name: library
-    description: imported from library.yml
+    description: write type (imported from library.yml)
     snippets:
       - path: library.yml
         processor:
             type: yq
   - name: ref_library
-    description: imported from ref_library.yml
+    description: write type (imported from ref_library.yml)
     snippets:
       - path: ref_library.yml
         processor:
             type: yq
   - name: template
-    description: imported from template.yml
+    description: write foo (imported from template.yml)
     snippets:
       - path: template.yml
         processor:
             type: yq
   - name: template_with_var
-    description: imported from template_with_var.yml
+    description: write foo (imported from template_with_var.yml)
     snippets:
       - path: template_with_var.yml
         processor:
             type: yq
   - name: vars
-    description: imported from vars.yml
+    description: write foo (imported from vars.yml)
     snippets:
       - path: vars.yml
         processor:
             type: yq
   - name: yq_library
-    description: imported from yq_library.yml
+    description: write type (imported from yq_library.yml)
     snippets:
       - path: yq_library.yml
         processor:
             type: yq
   - name: yq_script
-    description: imported from yq_script.yml
+    description: write foo (imported from yq_script.yml)
     snippets:
       - path: yq_script.yml
         processor:
             type: yq
   - name: yq_template
-    description: imported from yq_template.yml
+    description: write bazz (imported from yq_template.yml)
     snippets:
       - path: yq_template.yml
         processor:

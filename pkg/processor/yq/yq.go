@@ -33,26 +33,32 @@ func NewYqProcessor(y yaml.YamlAccess, f file.FileAccess) processor.Processor {
 	}
 }
 
-func (y *yqInt) ValidateSnippet(path string) (bool, error) {
+func (y *yqInt) ValidateSnippet(path string) (processor.SnippetHint, error) {
+	hint := processor.SnippetHint{
+		Valid: false,
+	}
 	content, err := y.file.Read(path)
 	if err != nil {
-		return false, fmt.Errorf("%w\n  while validating yq script %s", err, path)
+		return hint, fmt.Errorf("%w\n  while validating yq script %s", err, path)
 	}
 	var rawCommands y2.MapSlice
 	err = y2.Unmarshal(content, &rawCommands)
 	if err != nil {
-		return false, nil
+		return hint, nil
 	}
 	if len(rawCommands) == 0 {
-		return false, nil
+		return hint, nil
 	}
 	for _, command := range rawCommands {
 		strKey, ok := command.Key.(string)
 		if !ok || len(strKey) == 0 {
-			return false, nil
+			return hint, nil
 		}
 	}
-	return true, nil
+	hint.Valid = true
+	hint.Element = rawCommands[0].Key.(string)
+	hint.Action = "write" // yq uses subcommands - generate makes write scripts, import doesn't know
+	return hint, nil
 }
 
 type scriptFlags struct {
@@ -230,3 +236,5 @@ func getOptionBool(options map[string]interface{}, opt string) bool {
 
 	return false
 }
+
+// TODO backfill tests

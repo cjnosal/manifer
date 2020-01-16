@@ -32,14 +32,22 @@ type opFlags struct {
 	Path string `long:"path" value-name:"OP-PATH" description:"Extract value out of template (e.g.: /private_key)"`
 }
 
-func (i *opFileProcessor) ValidateSnippet(path string) (bool, error) {
+func (i *opFileProcessor) ValidateSnippet(path string) (processor.SnippetHint, error) {
+	hint := processor.SnippetHint{
+		Valid: false,
+	}
 	content, err := i.file.Read(path)
 	if err != nil {
-		return false, fmt.Errorf("%w\n  while validating opsfile %s", err, path)
+		return hint, fmt.Errorf("%w\n  while validating opsfile %s", err, path)
 	}
 	opDefs := []patch.OpDefinition{}
 	err = i.yaml.Unmarshal(content, &opDefs)
-	return err == nil, nil
+	hint.Valid = err == nil && len(opDefs) > 0 && opDefs[0].Path != nil
+	if hint.Valid {
+		hint.Element = *opDefs[0].Path
+		hint.Action = opDefs[0].Type
+	}
+	return hint, nil
 }
 
 func (i *opFileProcessor) ParsePassthroughFlags(args []string) (*library.ScenarioNode, []string, error) {

@@ -2,14 +2,14 @@ package importer
 
 import (
 	"errors"
+	"fmt"
+	"github.com/cjnosal/manifer/v2/test"
+	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/cjnosal/manifer/v2/test"
-	"github.com/golang/mock/gomock"
-	"github.com/google/go-cmp/cmp"
 
 	"github.com/cjnosal/manifer/v2/pkg/file"
 	"github.com/cjnosal/manifer/v2/pkg/library"
@@ -61,7 +61,8 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, errors.New("oops"))
+		hint := processor.SnippetHint{Valid: false}
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(hint, errors.New("oops"))
 
 		expectedErr := errors.New("oops\n  validating file /in\n  importing file /in")
 		_, err := subject.Import(library.OpsFile, "/in", true, "/dir/out")
@@ -82,7 +83,8 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(false, nil)
+		hint := processor.SnippetHint{Valid: false}
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(hint, nil)
 
 		expectedLib := &library.Library{
 			Scenarios: []library.Scenario{},
@@ -108,7 +110,12 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
+		hint := processor.SnippetHint{
+			Valid:   true,
+			Element: "element",
+			Action:  "action",
+		}
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(hint, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("", errors.New("oops"))
 
 		expectedErr := errors.New("oops\n  resolving relative path from /dir\n  importing file /in")
@@ -130,14 +137,19 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(false, nil)
-		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(true, nil)
+		hint := processor.SnippetHint{
+			Valid:   true,
+			Element: "element",
+			Action:  "action",
+		}
+		mockProcessor.EXPECT().ValidateSnippet("/in").Times(1).Return(hint, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("/in", "/dir").Times(1).Return("../in", nil)
 
 		expectedLib := &library.Library{
 			Scenarios: []library.Scenario{
 				{
 					Name:        "in",
-					Description: "imported from in",
+					Description: "action element (imported from ../in)",
 					Snippets: []library.Snippet{
 						library.Snippet{
 							Path: "../in",
@@ -259,7 +271,8 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(false, errors.New("oops"))
+		hint := processor.SnippetHint{Valid: false}
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(hint, errors.New("oops"))
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", &TestFileInfo{dir: false}, nil)
 			expectedErr := errors.New("oops\n  validating file f\n  importing file f")
@@ -283,7 +296,12 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
+		hint := processor.SnippetHint{
+			Valid:   true,
+			Element: "element",
+			Action:  "action",
+		}
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(hint, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("f", "/dir").Times(1).Return("", errors.New("oops"))
 
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
@@ -309,11 +327,31 @@ func TestImport(t *testing.T) {
 
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockFile.EXPECT().IsDir("/in").Times(1).Return(true, nil)
-		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(true, nil)
-		mockProcessor.EXPECT().ValidateSnippet("g").Times(1).Return(false, nil)
-		mockProcessor.EXPECT().ValidateSnippet("h").Times(1).Return(true, nil)
+		hint1 := processor.SnippetHint{
+			Valid:   true,
+			Element: "element",
+			Action:  "action",
+		}
+		hint2 := processor.SnippetHint{
+			Valid: false,
+		}
+		hint3 := processor.SnippetHint{
+			Valid:   true,
+			Element: "element3",
+			Action:  "action3",
+		}
+		hint4 := processor.SnippetHint{
+			Valid:   true,
+			Element: "element4",
+			Action:  "action4",
+		}
+		mockProcessor.EXPECT().ValidateSnippet("f").Times(1).Return(hint1, nil)
+		mockProcessor.EXPECT().ValidateSnippet("g").Times(1).Return(hint2, nil)
+		mockProcessor.EXPECT().ValidateSnippet("dup/h").Times(1).Return(hint3, nil)
+		mockProcessor.EXPECT().ValidateSnippet("other/dup/h").Times(1).Return(hint4, nil)
 		mockFile.EXPECT().ResolveRelativeFrom("f", "/dir").Times(1).Return("../f", nil)
-		mockFile.EXPECT().ResolveRelativeFrom("h", "/dir").Times(1).Return("../h", nil)
+		mockFile.EXPECT().ResolveRelativeFrom("dup/h", "/dir").Times(1).Return("dup/h", nil)
+		mockFile.EXPECT().ResolveRelativeFrom("other/dup/h", "/dir").Times(1).Return("other/dup/h", nil)
 
 		mockFile.EXPECT().Walk("/in", gomock.Any()).Times(1).Do(func(path string, callback func(path string, info os.FileInfo, err error) error) error {
 			err := callback("f", &TestFileInfo{dir: false}, nil)
@@ -324,7 +362,11 @@ func TestImport(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error %v", err)
 			}
-			err = callback("h", &TestFileInfo{dir: false}, nil)
+			err = callback("dup/h", &TestFileInfo{dir: false}, nil)
+			if err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+			err = callback("other/dup/h", &TestFileInfo{dir: false}, nil)
 			if err != nil {
 				t.Errorf("Unexpected error %v", err)
 			}
@@ -334,8 +376,20 @@ func TestImport(t *testing.T) {
 		expectedLib := &library.Library{
 			Scenarios: []library.Scenario{
 				{
+					Name:        "dup_h",
+					Description: "action3 element3 (imported from dup/h)",
+					Snippets: []library.Snippet{
+						library.Snippet{
+							Path: "dup/h",
+							Processor: library.Processor{
+								Type: library.OpsFile,
+							},
+						},
+					},
+				},
+				{
 					Name:        "f",
-					Description: "imported from f",
+					Description: "action element (imported from ../f)",
 					Snippets: []library.Snippet{
 						library.Snippet{
 							Path: "../f",
@@ -346,11 +400,11 @@ func TestImport(t *testing.T) {
 					},
 				},
 				{
-					Name:        "h",
-					Description: "imported from h",
+					Name:        "other_dup_h",
+					Description: "action4 element4 (imported from other/dup/h)",
 					Snippets: []library.Snippet{
 						library.Snippet{
-							Path: "../h",
+							Path: "other/dup/h",
 							Processor: library.Processor{
 								Type: library.OpsFile,
 							},
@@ -365,7 +419,8 @@ func TestImport(t *testing.T) {
 			t.Errorf("Unexpected error %v", err)
 		}
 		if !cmp.Equal(expectedLib, lib) {
-			t.Errorf("Expected:\n'%v'\nActual:\n'%v'\n", expectedLib, lib)
+			t.Errorf("Expected:\n'%+v'\nActual:\n'%+v'\n", expectedLib, lib)
+			t.Errorf(cmp.Diff(fmt.Sprintf("%+v", expectedLib), fmt.Sprintf("%+v", lib)))
 		}
 	})
 }
