@@ -19,7 +19,7 @@ function mock {
 	$GOPATH/bin/mockgen -source $path -destination $mockfile -package $packagename
 
 	# remove 'x "."' import - https://github.com/golang/mock/issues/230
-	sed -i "s/*x\./*/g; s/ x\./ /g; s/\[\]x\./[]/g; /x \".\"/d" $mockfile
+	sed -i "s/*x\./*/g; s/ x\./ /g; s/(x\./(/g; s/\[\]x\./[]/g; /x \".\"/d" $mockfile
 }
 export -f mock
 
