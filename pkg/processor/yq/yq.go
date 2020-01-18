@@ -4,7 +4,6 @@ import (
 	"github.com/cjnosal/manifer/v2/pkg/file"
 	"github.com/cjnosal/manifer/v2/pkg/library"
 	"github.com/cjnosal/manifer/v2/pkg/processor"
-	"github.com/cjnosal/manifer/v2/pkg/yaml"
 
 	"github.com/jessevdk/go-flags"
 	y2 "github.com/mikefarah/yaml/v2" // for MapSlice - replaced by Node in yaml v3
@@ -16,8 +15,7 @@ import (
 	"reflect"
 )
 
-type yqInt struct {
-	yaml yaml.YamlAccess
+type yqProcessor struct {
 	file file.FileAccess
 }
 
@@ -26,14 +24,13 @@ type writeCommand struct {
 	value interface{}
 }
 
-func NewYqProcessor(y yaml.YamlAccess, f file.FileAccess) processor.Processor {
-	return &yqInt{
-		yaml: y,
+func NewYqProcessor(f file.FileAccess) processor.Processor {
+	return &yqProcessor{
 		file: f,
 	}
 }
 
-func (y *yqInt) ValidateSnippet(path string) (processor.SnippetHint, error) {
+func (y *yqProcessor) ValidateSnippet(path string) (processor.SnippetHint, error) {
 	hint := processor.SnippetHint{
 		Valid: false,
 	}
@@ -66,7 +63,7 @@ type scriptFlags struct {
 	ScriptPaths []string `long:"script" short:"s" value-name:"PATH" description:"yaml write script for updating yaml"`
 }
 
-func (i *yqInt) ParsePassthroughFlags(args []string) (*library.ScenarioNode, []string, error) {
+func (i *yqProcessor) ParsePassthroughFlags(args []string) (*library.ScenarioNode, []string, error) {
 	var node *library.ScenarioNode
 	scriptFlags := scriptFlags{}
 	remainder, err := flags.NewParser(&scriptFlags, flags.IgnoreUnknown).ParseArgs(args)
@@ -96,7 +93,7 @@ func (i *yqInt) ParsePassthroughFlags(args []string) (*library.ScenarioNode, []s
 	return node, remainder, nil
 }
 
-func (y *yqInt) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, options map[string]interface{}) ([]byte, error) {
+func (y *yqProcessor) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *file.TaggedBytes, options map[string]interface{}) ([]byte, error) {
 	yql := yqlib.NewYqLib(logging.MustGetLogger("yq"))
 	logging.SetLevel(logging.ERROR, "yq")
 	y2.DefaultMapType = reflect.TypeOf(y2.MapSlice{})
@@ -113,6 +110,9 @@ func (y *yqInt) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *f
 	}
 
 	if command == "write" {
+		if snippetBytes == nil {
+			return nil, fmt.Errorf("snippet required for write command")
+		}
 		writeCommands := []writeCommand{}
 
 		var rawCommands y2.MapSlice
@@ -152,6 +152,9 @@ func (y *yqInt) ProcessTemplate(templateBytes *file.TaggedBytes, snippetBytes *f
 		}
 
 	} else if command == "merge" {
+		if snippetBytes == nil {
+			return nil, fmt.Errorf("snippet required for write command")
+		}
 		y2.DefaultMapType = reflect.TypeOf(map[interface{}]interface{}{})
 		err = y2.Unmarshal(templateBytes.Bytes, &template)
 		if err != nil {

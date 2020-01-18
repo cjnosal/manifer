@@ -31,7 +31,7 @@ func (i *processorFactory) Create(t library.Type) (processor.Processor, error) {
 	if t == library.OpsFile {
 		return opsfile.NewOpsFileProcessor(i.yaml, i.file), nil
 	} else if t == library.Yq {
-		return yq.NewYqProcessor(i.yaml, i.file), nil
+		return yq.NewYqProcessor(i.file), nil
 	}
 	return nil, fmt.Errorf("Unknown library type %v", t)
 }
