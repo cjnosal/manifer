@@ -30,7 +30,7 @@ func (i *snippetGenerator) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.Ta
 				file := fmt.Sprintf(".%sset_%s.yml", string(os.PathSeparator), k)
 				snippet, err := i.generate(path, file, "", k, v)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("%w\n  generating snippet for scalar %s at %s", err, k, path)
 				}
 				snippets = append(snippets, snippet)
 			} else {
@@ -38,7 +38,7 @@ func (i *snippetGenerator) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.Ta
 				d := "."
 				o, err := i.visit(p, d, "", k, v)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("%w\n  visiting map key %s at %s", err, k, p)
 				}
 				snippets = append(snippets, o...)
 			}
@@ -50,7 +50,7 @@ func (i *snippetGenerator) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.Ta
 		file := fmt.Sprintf(".%sadd_%s.yml", string(os.PathSeparator), elementName)
 		appendsnippet, err := i.generate(appendpath, file, "", elementName, element)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  generating snippet for array %s at %s", err, elementName, appendpath)
 		}
 		snippets = append(snippets, appendsnippet)
 
@@ -59,7 +59,7 @@ func (i *snippetGenerator) GenerateSnippets(schema *yaml.SchemaNode) ([]*file.Ta
 			editpath := i.pathBuilder.Index(indexvar)
 			editsnippets, err := i.visit(editpath, ".", elementName, elementName, element)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w\n  visiting map key %s at %s", err, elementName, editpath)
 			}
 			snippets = append(snippets, editsnippets...)
 		}
@@ -77,7 +77,7 @@ func (i *snippetGenerator) visit(path string, dir string, parent string, name st
 		file := fmt.Sprintf("%s%sadd_%s.yml", dir, string(os.PathSeparator), elementName)
 		appendsnippet, err := i.generate(appendpath, file, parent, elementName, element)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  generating snippet for array %s at %s", err, elementName, appendpath)
 		}
 		snippets = append(snippets, appendsnippet)
 
@@ -86,7 +86,7 @@ func (i *snippetGenerator) visit(path string, dir string, parent string, name st
 			editpath := fmt.Sprintf("%s%s", path, i.pathBuilder.Index(indexvar))
 			editsnippets, err := i.visit(editpath, dir, elementName, elementName, element)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w\n  visiting array element %s at %s", err, elementName, editpath)
 			}
 			snippets = append(snippets, editsnippets...)
 		}
@@ -98,7 +98,7 @@ func (i *snippetGenerator) visit(path string, dir string, parent string, name st
 		file := fmt.Sprintf("%s%sset_%s.yml", dir, string(os.PathSeparator), name)
 		snippet, err := i.generate(optionalPath, file, parent, name, node)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  generating snippet for map %s at %s", err, name, optionalPath)
 		}
 		snippets = append(snippets, snippet)
 
@@ -108,7 +108,7 @@ func (i *snippetGenerator) visit(path string, dir string, parent string, name st
 			d := fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), name)
 			o, err := i.visit(p, d, name, k, v)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w\n  visiting map key %s at %s", err, k, p)
 			}
 			snippets = append(snippets, o...)
 		}
@@ -143,7 +143,7 @@ func (i *snippetGenerator) generate(path string, filePath string, parent string,
 	snippet := i.pathBuilder.Marshal(path, value)
 	bytes, err := i.yaml.Marshal(snippet)
 	if err != nil {
-		return nil, fmt.Errorf("%w\n  marshaling %s", err, path)
+		return nil, fmt.Errorf("%w\n  marshaling snippet", err)
 	}
 	return &file.TaggedBytes{Bytes: bytes, Tag: filePath}, nil
 }

@@ -38,7 +38,7 @@ func (l *libraryImporter) Import(libType library.Type, path string, recursive bo
 	imports := []importedSnippet{}
 	validator, err := l.validator.Create(libType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while initializing processor of type %s", err, libType)
 	}
 	isDir, err := l.fileIO.IsDir(path)
 	if err != nil {

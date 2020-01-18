@@ -156,7 +156,7 @@ func TestExecute(t *testing.T) {
 			Yaml:             mockYaml,
 		}
 
-		expectedError := errors.New("test\n  while trying to interpolate snippet")
+		expectedError := errors.New("test\n  while trying to interpolate snippet\n  while processing snippet &{bizz: bazz snippet}")
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
 		globals := library.InterpolatorParams{
@@ -201,7 +201,7 @@ func TestExecute(t *testing.T) {
 			Yaml:             mockYaml,
 		}
 
-		expectedError := errors.New("test\n  while trying to process template")
+		expectedError := errors.New("test\n  while trying to process template\n  while processing snippet &{bizz: bazz snippet}")
 		in := &file.TaggedBytes{Tag: "in", Bytes: []byte("foo: bar")}
 		snippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("bizz: bazz")}
 		intSnippet := &file.TaggedBytes{Tag: "snippet", Bytes: []byte("intSnippetBytes")}
@@ -271,7 +271,7 @@ func TestExecute(t *testing.T) {
 		mockProcessorFactory.EXPECT().Create(library.OpsFile).Times(1).Return(mockProcessor, nil)
 		mockProcessor.EXPECT().ProcessTemplate(in, intSnippet, snippetProcessor.Options).Times(1).Return([]byte("bytes"), nil)
 
-		expectedError := errors.New("test\n  while trying to interpolate template")
+		expectedError := errors.New("test\n  while trying to interpolate template\n  while processing snippet &{bizz: bazz snippet}")
 		_, err := subject.Execute(false, false, in, snippet, snippetProcessor, snippetVars, globals)
 
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {

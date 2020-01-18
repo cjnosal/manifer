@@ -145,15 +145,15 @@ func (l *libImpl) ListScenarios(libraryPaths []string, all bool) ([]scenario.Sce
 func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.ScenarioNode, error) {
 	loaded, err := l.loader.Load(libraryPaths)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while loading libraries", err)
 	}
 	node, err := loaded.GetScenarioTree(name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while loading scenario %s", err, name)
 	}
 	err = l.makePathsRelative(node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while resolving relative paths", err)
 	}
 	return node, nil
 }
@@ -161,11 +161,11 @@ func (l *libImpl) GetScenarioTree(libraryPaths []string, name string) (*library.
 func (l *libImpl) GetSnippetScenarioNode(libType library.Type, passthroughArgs []string) (*library.ScenarioNode, []string, error) {
 	processor, err := l.procFact.Create(libType)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w\n  while initializing processor of type %s", err, libType)
 	}
 	node, remainder, err := processor.ParsePassthroughFlags(passthroughArgs)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w\n  while parsing passthrough snippets of type %s", err, libType)
 	}
 	return node, remainder, nil
 }
@@ -178,28 +178,28 @@ func (l *libImpl) Generate(libType library.Type, templatePath string, libPath st
 	// parse template
 	templateBytes, err := l.file.Read(templatePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while reading template", err)
 	}
 	node := &y.Node{}
 	err = l.yaml.Unmarshal(templateBytes, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while unmarshaling template", err)
 	}
 	schemaBuilder := &yaml.SchemaBuilder{}
 
 	// generate snippets from schema
 	err = l.yaml.Walk(node, schemaBuilder.OnVisit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while building schema from template", err)
 	}
 
 	generator, err := l.procFact.CreateGenerator(libType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while initializing generator of type %s", err, libType)
 	}
 	snippets, err := generator.GenerateSnippets(schemaBuilder.Root)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while generating snippets", err)
 	}
 
 	// write snippets
@@ -208,11 +208,11 @@ func (l *libImpl) Generate(libType library.Type, templatePath string, libPath st
 		dir := filepath.Dir(snippetPath)
 		err = l.file.MkDir(dir)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while creating directory for snippet %s", err, snippetPath)
 		}
 		err = l.file.Write(snippetPath, snippet.Bytes, 0644)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while saving snippet %s", err, snippetPath)
 		}
 	}
 
@@ -226,7 +226,7 @@ func (l *libImpl) Import(libType library.Type, path string, recursive bool, outP
 func (l *libImpl) AddScenario(libraryPath string, name string, description string, scenarioDeps []string, passthrough []string) (*library.Library, error) {
 	loaded, err := l.loader.Load([]string{libraryPath})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while loading libraries", err)
 	}
 	lib := loaded.TopLibraries[0]
 
@@ -234,7 +234,7 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	for _, dep := range scenarioDeps {
 		_, err = loaded.GetScenarioTree(dep)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while loading scenario %s", err, dep)
 		}
 		refs = append(refs, library.ScenarioRef{
 			Name:         dep,
@@ -246,7 +246,7 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	for _, t := range library.Types {
 		node, remainder, err := l.GetSnippetScenarioNode(t, passthrough)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while getting passthrough snippets", err)
 		}
 		if node != nil {
 			snippets = append(snippets, node.Snippets...)
@@ -255,7 +255,7 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 	}
 	varnode, remainder, err := l.GetVarScenarioNode(passthrough)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while getting passthrough variables", err)
 	}
 	args := library.InterpolatorParams{}
 	if varnode != nil {
@@ -277,7 +277,7 @@ func (l *libImpl) AddScenario(libraryPath string, name string, description strin
 
 	err = l.makeLibraryPathsRelative(libraryPath, lib)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while resolving relative paths", err)
 	}
 
 	return lib, nil
@@ -287,7 +287,7 @@ func (l *libImpl) makeLibraryPathsRelative(libpath string, lib *library.Library)
 	for i, libRef := range lib.Libraries {
 		rel, err := l.file.ResolveRelativeFrom(libRef.Path, libpath)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  while finding relative path from %s to %s", err, libpath, libRef.Path)
 		}
 		lib.Libraries[i].Path = rel
 	}
@@ -296,7 +296,7 @@ func (l *libImpl) makeLibraryPathsRelative(libpath string, lib *library.Library)
 		for i, snippet := range scenario.Snippets {
 			rel, err := l.file.ResolveRelativeFrom(snippet.Path, libpath)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w\n  while finding relative path from %s to %s", err, libpath, snippet.Path)
 			}
 			scenario.Snippets[i].Path = rel
 		}
@@ -308,19 +308,19 @@ func (l *libImpl) makePathsRelative(node *library.ScenarioNode) error {
 	for i, snippet := range node.Snippets {
 		rel, err := l.file.ResolveRelativeFromWD(snippet.Path)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  while finding relative path to %s", err, snippet.Path)
 		}
 		node.Snippets[i].Path = rel
 	}
 	for _, dep := range node.Dependencies {
 		err := l.makePathsRelative(dep)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  while finding relative paths for %s", err, dep)
 		}
 	}
 	rel, err := l.file.ResolveRelativeFromWD(node.LibraryPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w\n  while finding relative path to %s", err, node.LibraryPath)
 	}
 	node.LibraryPath = rel
 	return nil

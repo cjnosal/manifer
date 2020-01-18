@@ -212,7 +212,7 @@ func TestListScenarios(t *testing.T) {
 
 		_, err := subject.ListScenarios([]string{"lib1", "lib2"}, false)
 
-		if err == nil || err.Error() != "test" {
+		if err == nil || err.Error() != "test\n  loading libraries" {
 			t.Errorf("Loader error not reported")
 		}
 	})

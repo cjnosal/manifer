@@ -31,7 +31,7 @@ func (n *SchemaNode) Insert(tokens []string, kind yaml.Kind) error {
 		}
 		err := child.Insert(tokens[1:], kind)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  inserting %v into schema at %v", err, kind, tokens)
 		}
 	}
 	return nil
@@ -66,7 +66,7 @@ func (s *SchemaBuilder) OnVisit(node *yaml.Node, ancestors []Ancestor) error {
 		t := tokens(ancestors)
 		err := s.Root.Insert(t, node.Kind)
 		if err != nil {
-			return fmt.Errorf("%w inserting %v", err, t)
+			return fmt.Errorf("%w\n  inserting %v", err, t)
 		}
 	}
 	return nil

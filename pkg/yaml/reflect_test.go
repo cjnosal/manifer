@@ -163,7 +163,7 @@ func TestSchemaBuilder(t *testing.T) {
 		barValue := &y.Node{Kind: y.MappingNode}
 		err := subject.OnVisit(barValue, []Ancestor{{Node: map1, Token: "foo"}, {Node: docSequence, Token: "1"}, {Node: doc}})
 
-		expectedError := errors.New("Different types (4 vs 2) inserting [!!element foo]")
+		expectedError := errors.New("Different types (4 vs 2)\n  inserting 4 into schema at [!!element foo]\n  inserting [!!element foo]")
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}
@@ -186,7 +186,7 @@ func TestSchemaBuilder(t *testing.T) {
 		fooValue := &y.Node{Kind: y.SequenceNode}
 		err := subject.OnVisit(fooValue, []Ancestor{{Node: map0, Token: "foo"}, {Node: docSequence, Token: "0"}, {Node: doc}})
 
-		expectedError := errors.New("Missing node !!element inserting [!!element foo]")
+		expectedError := errors.New("Missing node !!element\n  inserting [!!element foo]")
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected:\n'''%v'''\nActual:\n'''%v'''\n", expectedError, err)
 		}

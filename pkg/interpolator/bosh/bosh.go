@@ -34,7 +34,7 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params l
 		f := &boshtpl.VarFileArg{}
 		err := f.UnmarshalFlag(fmt.Sprintf("%s=%s", v, p))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  unmarshaling var file %s", err, p)
 		}
 		libVarFiles = append(libVarFiles, *f)
 	}
@@ -43,7 +43,7 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params l
 		f := &boshtpl.VarsFileArg{}
 		err := f.UnmarshalFlag(p)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  unmarshaling vars file %s", err, p)
 		}
 		libVarsFiles = append(libVarsFiles, *f)
 	}
@@ -52,7 +52,7 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params l
 		e := &boshtpl.VarsEnvArg{}
 		err := e.UnmarshalFlag(p)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  unmarshaling vars env %s", err, p)
 		}
 		libVarsEnv = append(libVarsEnv, *e)
 	}
@@ -60,7 +60,7 @@ func (i *boshInterpolator) Interpolate(templateBytes *file.TaggedBytes, params l
 	if params.VarsStore != "" {
 		err := libStore.UnmarshalFlag(params.VarsStore)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  unmarshaling vars store %s", err, params.VarsStore)
 		}
 	}
 

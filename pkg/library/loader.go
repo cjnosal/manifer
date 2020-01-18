@@ -193,7 +193,7 @@ func (l *Loader) loadLib(path string, loaded *LoadedLibrary, top bool) error {
 		lib.Libraries[i].Path = absLibPath
 		err = l.loadLib(absLibPath, loaded, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w\n  while loading library %s", err, absLibPath)
 		}
 	}
 

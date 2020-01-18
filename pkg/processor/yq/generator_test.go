@@ -118,7 +118,7 @@ func TestGenerate(t *testing.T) {
 
 		_, err := subject.GenerateSnippets(schema)
 
-		expectedError := errors.New("oops\n  marshaling foo")
+		expectedError := errors.New("oops\n  marshaling snippet\n  generating snippet for scalar foo at foo")
 		if !cmp.Equal(&expectedError, &err, cmp.Comparer(test.EqualMessage)) {
 			t.Errorf("Expected error:\n'''%s'''\nActual:\n'''%s'''\n", expectedError, err)
 		}

@@ -1,6 +1,7 @@
 package scenario
 
 import (
+	"fmt"
 	"github.com/cjnosal/manifer/v2/pkg/library"
 )
 
@@ -21,7 +22,7 @@ func (l *Lister) ListScenarios(libraryPaths []string, all bool) ([]ScenarioEntry
 	entries := []ScenarioEntry{}
 	loadedLibrary, err := l.Loader.Load(libraryPaths)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s\n  loading libraries", err)
 	}
 
 	for _, lib := range loadedLibrary.TopLibraries {

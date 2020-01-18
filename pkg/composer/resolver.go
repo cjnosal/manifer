@@ -37,7 +37,7 @@ func (r *Resolver) Resolve(libPaths []string, scenarioNames []string, passthroug
 	for _, t := range library.Types {
 		processor, err := r.ProcessorFactory.Create(t)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while initializing processor of type  %s", err, t)
 		}
 		passthroughNode, remainder, err := processor.ParsePassthroughFlags(passthrough)
 		if err != nil {

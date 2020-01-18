@@ -56,7 +56,7 @@ func (i *InterpolationExecutor) Execute(showPlan bool, showDiff bool, template *
 	}
 	bytes, err := i.processSnippet(template, snippet, snippetProcessor, snippetVars, globals)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w\n  while processing snippet %s", err, snippet)
 	}
 	if showDiff {
 		i.Output.Write([]byte("\nDiff:\n"))
@@ -84,7 +84,7 @@ func (i *InterpolationExecutor) processSnippet(template *file.TaggedBytes, snipp
 	if snippetProcessor != nil {
 		processor, err := i.ProcessorFactory.Create(snippetProcessor.Type)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w\n  while initializing processor of type %s", err, snippetProcessor.Type)
 		}
 		processedBytes, err := processor.ProcessTemplate(template, intSnippet, snippetProcessor.Options)
 		if err != nil {

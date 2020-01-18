@@ -104,9 +104,9 @@ func TestFindDiff(t *testing.T) {
 			File:  mockFile,
 			Patch: mockPatch,
 		}
-		expectedError := errors.New("test")
+		expectedError := errors.New("test\n  while reading first file file1")
 
-		mockFile.EXPECT().Read("file1").Times(1).Return(nil, expectedError)
+		mockFile.EXPECT().Read("file1").Times(1).Return(nil, errors.New("test"))
 
 		_, err := subject.FindDiff("file1", "file2")
 
@@ -127,9 +127,9 @@ func TestFindDiff(t *testing.T) {
 			Patch: mockPatch,
 		}
 
-		expectedError := errors.New("test")
+		expectedError := errors.New("test\n  while reading second file file2")
 		mockFile.EXPECT().Read("file1").Times(1).Return([]byte("content1"), nil)
-		mockFile.EXPECT().Read("file2").Times(1).Return(nil, expectedError)
+		mockFile.EXPECT().Read("file2").Times(1).Return(nil, errors.New("test"))
 
 		_, err := subject.FindDiff("file1", "file2")
 

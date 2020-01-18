@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"fmt"
 	"github.com/cjnosal/manifer/v2/pkg/file"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -23,11 +24,11 @@ type FileDiff struct {
 func (f *FileDiff) FindDiff(path1 string, path2 string) (string, error) {
 	b1, err := f.File.Read(path1)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w\n  while reading first file %s", err, path1)
 	}
 	b2, err := f.File.Read(path2)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w\n  while reading second file %s", err, path2)
 	}
 
 	diff := f.StringDiff(string(b1), string(b2))
