@@ -239,5 +239,3 @@ func getOptionBool(options map[string]interface{}, opt string) bool {
 
 	return false
 }
-
-// TODO backfill tests
